@@ -1,0 +1,110 @@
+**4. “Etiqueta” → “Ref” + placeholders automáticos**
+Improve semantics of the cut definition panel.
+
+Requirements:
+- Rename label "Etiqueta" to "Ref".
+- Auto-generate placeholders as sequential letters: A, B, C...
+- Users can freely edit the value.
+- Must remain compatible with existing saved cuts.
+- Do NOT change the underlying data model.
+
+**5. Nueva métrica: Desperdicio (%)**
+Add a waste metric to complement fabric usage.
+
+Requirements:
+- Add metric "Desperdicio (%)".
+- Calculation:
+  100 - uso de tela
+- Display with one decimal.
+- Match existing metrics visual style.
+- Reuse existing calculations; do NOT duplicate logic.
+
+**6. Tooltips en inputs clave**
+Add accessible explanatory tooltips to key inputs.
+
+Add tooltips ONLY to:
+
+1) Ancho de tela
+   "Ancho fijo del rollo de tela. El largo se calcula automáticamente."
+
+2) Margen lateral
+   "Margen aplicado a ambos lados de la tela. Valor en centímetros (cm)."
+
+3) Margen superior/inferior
+   "Margen aplicado al inicio y fin del largo de la tela. Valor en centímetros (cm)."
+
+4) Uso de tela
+   "Porcentaje del área total de la tela que se aprovecha con los cortes configurados."
+
+Tooltip requirements:
+- Info icon ⓘ with transparent background (no circle, no fill)
+- Tooltip must:
+  - Have max-width
+  - Auto-flip if near viewport edge
+  - Never clip text
+- No external libraries allowed.
+
+**2. Colores por tipo de corte + tooltip en preview**
+Improve preview readability by visually distinguishing each cut type.
+
+Requirements:
+- Assign a consistent color per cut type using the existing palette.
+- On hover over a cut in the preview, show a tooltip with:
+  "Corte A · 25 × 35 cm · x4"
+- Tooltip rules:
+  - Neutral background
+  - max-width defined
+  - Must auto-flip to stay inside viewport
+- Use data-cut-id to link pieces and UI.
+- Do NOT duplicate logic or introduce new state.
+
+**3. Resaltado cruzado UI ↔ Preview**
+Add cross-highlighting between the cut list and the preview.
+
+Requirements:
+- Hovering a cut type in the left panel:
+  - Highlights its pieces in the preview
+  - Dims all other pieces (opacity reduction)
+- On mouse leave, restore normal state.
+- Use data-cut-id only (no new global state).
+- No layout recalculation or performance degradation.
+
+**8. Ajuste fino de escala del preview**
+Fine-tune preview scaling while preserving technical accuracy.
+
+Requirements:
+- Horizontal scale must be exact (real fabric width).
+- Vertical scale may compress ONLY if total length exceeds viewport.
+- Display helper texts:
+  - "Escala horizontal exacta"
+  - "Largo comprimido para caber en pantalla"
+- No internal scrollbars.
+- Do NOT distort horizontal proportions.
+
+**7. Refinamiento Exportar PNG**
+Refine the PNG export UX without changing the export pipeline.
+
+Requirements:
+- Add tooltip to export button:
+  "Exporta la previsualización actual como imagen PNG."
+- Disable the button when no cuts are defined.
+- Exported PNG must include:
+  - Horizontal ruler (if visible)
+  - Length badge (if visible)
+- Do NOT change the current export flow or introduce libraries.
+
+**9. Mejora del algoritmo shelf (orden previo)**
+Improve shelf-based packing efficiency without changing the core algorithm.
+
+Requirements:
+- Before applying shelf / first-fit:
+  - Sort all cut pieces by HEIGHT descending.
+  - Then expand by quantity.
+- Rotation must remain disabled.
+- Add explanatory comment:
+
+  // Ordenar por alto reduce fragmentación
+  // y mejora el aprovechamiento del largo en shelf.
+
+- Do NOT change public APIs, signatures, or simple-case results.
+
