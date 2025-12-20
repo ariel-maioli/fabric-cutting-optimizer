@@ -391,12 +391,10 @@
     }
     const gapX = Math.max(0, spec.gapX || 0);
     const gapY = Math.max(0, spec.gapY || 0);
-    const estimatedHeight = pieces.reduce((sum, piece) => sum + piece.height, 0) + gapY * Math.max(0, pieces.length - 1);
-    const tallestPiece = pieces.reduce((max, piece) => Math.max(max, piece.height), 0);
-    const initialHeight = Math.max(estimatedHeight, tallestPiece + gapY, 1);
-    const freeRects = [createFreeRect(spec.marginX, spec.marginY, printableWidth, initialHeight)];
+    const freeRects = [createFreeRect(spec.marginX, spec.marginY, printableWidth, Number.POSITIVE_INFINITY)];
     const placements = [];
     let pieceArea = 0;
+    let currentMaxY = spec.marginY;
 
     for (let i = 0; i < pieces.length; i += 1) {
       const piece = pieces[i];
@@ -404,7 +402,7 @@
       if (piece.width > printableWidth + FLOAT_EPS) {
         return { error: `El ancho de "${piece.label}" supera el ancho útil.` };
       }
-      const node = findBestFreeRect(freeRects, piece, gapX, gapY);
+      const node = selectBestPlacement(freeRects, piece, gapX, gapY, currentMaxY);
       if (!node) {
         return { error: `No se pudo ubicar la pieza "${piece.label}".` };
       }
@@ -416,25 +414,15 @@
         x: node.x,
         y: node.y
       });
-
-      const occupiedRect = {
-        x: node.x,
-        y: node.y,
-        width: piece.width + gapX,
-        height: piece.height + gapY
-      };
-      splitFreeRectangles(freeRects, occupiedRect);
-      pruneFreeRectangles(freeRects);
-      mergeFreeRectangles(freeRects);
+      currentMaxY = Math.max(currentMaxY, node.y + piece.height);
+      carveFreeRectangles(freeRects, node.rectIndex, piece, gapX, gapY);
     }
 
-    const maxBottom = placements.reduce((max, rect) => Math.max(max, rect.y + rect.height), spec.marginY);
+    const maxBottom = computeMaxBottom(placements, spec.marginY);
     const totalLengthCm = Math.max(spec.marginY * 2, maxBottom + spec.marginY);
 
-    const virtualBand = { id: 'band-virtual', placements: placements.slice() };
     return {
       placements,
-      bands: placements.length ? [virtualBand] : [],
       totalLengthCm,
       printableWidth,
       spec,
@@ -442,121 +430,102 @@
     };
   }
 
+  function computeMaxBottom(placements, marginY) {
+    if (!Array.isArray(placements) || !placements.length) {
+      return marginY;
+    }
+    let maxBottom = marginY;
+    for (let i = 0; i < placements.length; i += 1) {
+      const placement = placements[i];
+      const bottom = (placement?.y || 0) + (placement?.height || 0);
+      if (bottom > maxBottom) {
+        maxBottom = bottom;
+      }
+    }
+    return maxBottom;
+  }
+
   function createFreeRect(x, y, width, height) {
     return { x, y, width, height };
   }
 
-  function findBestFreeRect(freeRects, piece, gapX, gapY) {
+  function selectBestPlacement(freeRects, piece, gapX, gapY, currentMaxY) {
     const effWidth = piece.width + gapX;
     const effHeight = piece.height + gapY;
     let best = null;
     for (let i = 0; i < freeRects.length; i += 1) {
       const rect = freeRects[i];
-      if (rect.width + FLOAT_EPS < effWidth || rect.height + FLOAT_EPS < effHeight) continue;
-      const areaFit = rect.width * rect.height - effWidth * effHeight;
-      const leftoverHoriz = rect.width - effWidth;
-      const leftoverVert = rect.height - effHeight;
-      const shortSide = Math.min(leftoverHoriz, leftoverVert);
-      const yDelta = best ? rect.y - best.rect.y : 0;
-      const xDelta = best ? rect.x - best.rect.x : 0;
-      const replace =
-        !best ||
-        yDelta < -FLOAT_EPS ||
-        (Math.abs(yDelta) <= FLOAT_EPS && (xDelta < -FLOAT_EPS ||
-          (Math.abs(xDelta) <= FLOAT_EPS && (areaFit < best.areaFit - FLOAT_EPS ||
-            (Math.abs(areaFit - best.areaFit) <= FLOAT_EPS && shortSide < best.shortSide - FLOAT_EPS)))));
-      if (replace) {
-        best = { x: rect.x, y: rect.y, rect, areaFit, shortSide };
+      if (rect.width + FLOAT_EPS < effWidth || rect.height + FLOAT_EPS < effHeight) {
+        continue;
+      }
+      const candidateMaxY = Math.max(currentMaxY, rect.y + piece.height);
+      const leftoverArea = computeLeftoverArea(rect, effWidth, effHeight);
+      const candidate = {
+        rectIndex: i,
+        x: rect.x,
+        y: rect.y,
+        maxY: candidateMaxY,
+        leftoverArea,
+        rectY: rect.y,
+        rectX: rect.x
+      };
+      if (isBetterCandidate(candidate, best)) {
+        best = candidate;
       }
     }
     return best;
   }
 
-  function splitFreeRectangles(freeRects, usedRect) {
-    const updated = [];
-    for (let i = 0; i < freeRects.length; i += 1) {
-      const free = freeRects[i];
-      if (!rectsIntersect(free, usedRect)) {
-        updated.push(free);
-        continue;
-      }
-      const fragments = splitRect(free, usedRect);
-      fragments.forEach((fragment) => {
-        if (fragment.width > FLOAT_EPS && fragment.height > FLOAT_EPS) {
-          updated.push(fragment);
-        }
-      });
+  function computeLeftoverArea(rect, usedWidth, usedHeight) {
+    const area = rect.width * rect.height;
+    const usedArea = usedWidth * usedHeight;
+    if (!Number.isFinite(area) || !Number.isFinite(usedArea)) {
+      return Number.POSITIVE_INFINITY;
     }
-    freeRects.length = 0;
-    freeRects.push(...updated);
+    const leftover = area - usedArea;
+    return leftover >= 0 ? leftover : 0;
   }
 
-  function splitRect(free, used) {
-    const result = [];
-    const freeRight = free.x + free.width;
-    const freeBottom = free.y + free.height;
-    const usedRight = used.x + used.width;
-    const usedBottom = used.y + used.height;
-
-    if (used.x > free.x) {
-      result.push({
-        x: free.x,
-        y: free.y,
-        width: used.x - free.x,
-        height: free.height
-      });
+  function isBetterCandidate(candidate, current) {
+    if (!current) return true;
+    if (candidate.maxY < current.maxY - FLOAT_EPS) {
+      return true;
     }
-
-    if (usedRight < freeRight) {
-      result.push({
-        x: usedRight,
-        y: free.y,
-        width: freeRight - usedRight,
-        height: free.height
-      });
-    }
-
-    const overlapX1 = Math.max(free.x, used.x);
-    const overlapX2 = Math.min(freeRight, usedRight);
-
-    if (overlapX2 > overlapX1) {
-      if (used.y > free.y) {
-        result.push({
-          x: overlapX1,
-          y: free.y,
-          width: overlapX2 - overlapX1,
-          height: used.y - free.y
-        });
+    if (areClose(candidate.maxY, current.maxY)) {
+      if (candidate.leftoverArea < current.leftoverArea - FLOAT_EPS) {
+        return true;
       }
-      if (usedBottom < freeBottom) {
-        result.push({
-          x: overlapX1,
-          y: usedBottom,
-          width: overlapX2 - overlapX1,
-          height: freeBottom - usedBottom
-        });
+      if (areClose(candidate.leftoverArea, current.leftoverArea)) {
+        if (candidate.rectY < current.rectY - FLOAT_EPS) {
+          return true;
+        }
+        if (areClose(candidate.rectY, current.rectY) && candidate.rectX < current.rectX - FLOAT_EPS) {
+          return true;
+        }
       }
     }
-
-    return result;
+    return false;
   }
 
-  function pruneFreeRectangles(freeRects) {
-    for (let i = 0; i < freeRects.length; i += 1) {
-      for (let j = i + 1; j < freeRects.length; j += 1) {
-        const rectA = freeRects[i];
-        const rectB = freeRects[j];
-        if (rectContains(rectA, rectB)) {
-          freeRects.splice(j, 1);
-          j -= 1;
-          continue;
-        }
-        if (rectContains(rectB, rectA)) {
-          freeRects.splice(i, 1);
-          i -= 1;
-          break;
-        }
-      }
+  function carveFreeRectangles(freeRects, rectIndex, piece, gapX, gapY) {
+    const rect = freeRects.splice(rectIndex, 1)[0];
+    if (!rect) return;
+    const effWidth = piece.width + gapX;
+    const effHeight = piece.height + gapY;
+    const rightWidth = rect.width - effWidth;
+    if (rightWidth > FLOAT_EPS) {
+      addFreeRect(freeRects, rect.x + effWidth, rect.y, rightWidth, effHeight);
+    }
+    const bottomHeight = rect.height - effHeight;
+    if (bottomHeight > FLOAT_EPS) {
+      addFreeRect(freeRects, rect.x, rect.y + effHeight, rect.width, bottomHeight);
+    }
+    mergeFreeRectangles(freeRects);
+  }
+
+  function addFreeRect(freeRects, x, y, width, height) {
+    if (width > FLOAT_EPS && height > FLOAT_EPS) {
+      freeRects.push(createFreeRect(x, y, width, height));
     }
   }
 
@@ -568,8 +537,8 @@
         for (let j = i + 1; j < freeRects.length; j += 1) {
           const a = freeRects[i];
           const b = freeRects[j];
-          if (Math.abs(a.y - b.y) <= FLOAT_EPS && Math.abs(a.height - b.height) <= FLOAT_EPS) {
-            const touchesHoriz = Math.abs(a.x + a.width - b.x) <= FLOAT_EPS || Math.abs(b.x + b.width - a.x) <= FLOAT_EPS;
+          if (areClose(a.y, b.y) && areClose(a.height, b.height)) {
+            const touchesHoriz = areClose(a.x + a.width, b.x) || areClose(b.x + b.width, a.x);
             if (touchesHoriz) {
               const minX = Math.min(a.x, b.x);
               const maxX = Math.max(a.x + a.width, b.x + b.width);
@@ -579,8 +548,8 @@
               break;
             }
           }
-          if (Math.abs(a.x - b.x) <= FLOAT_EPS && Math.abs(a.width - b.width) <= FLOAT_EPS) {
-            const touchesVert = Math.abs(a.y + a.height - b.y) <= FLOAT_EPS || Math.abs(b.y + b.height - a.y) <= FLOAT_EPS;
+          if (areClose(a.x, b.x) && areClose(a.width, b.width)) {
+            const touchesVert = areClose(a.y + a.height, b.y) || areClose(b.y + b.height, a.y);
             if (touchesVert) {
               const minY = Math.min(a.y, b.y);
               const maxY = Math.max(a.y + a.height, b.y + b.height);
@@ -596,17 +565,13 @@
     }
   }
 
-  function rectsIntersect(a, b) {
-    return a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y;
-  }
-
-  function rectContains(outer, inner) {
-    return (
-      outer.x <= inner.x + FLOAT_EPS &&
-      outer.y <= inner.y + FLOAT_EPS &&
-      outer.x + outer.width >= inner.x + inner.width - FLOAT_EPS &&
-      outer.y + outer.height >= inner.y + inner.height - FLOAT_EPS
-    );
+  function areClose(a, b, epsilon = FLOAT_EPS) {
+    if (a === b) return true;
+    const aFinite = Number.isFinite(a);
+    const bFinite = Number.isFinite(b);
+    if (!aFinite && !bFinite) return true;
+    if (!aFinite || !bFinite) return false;
+    return Math.abs(a - b) <= epsilon;
   }
 
   function buildMetrics(layout, totalPieces) {
