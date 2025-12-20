@@ -47,18 +47,42 @@
               <p class="param-description">Ancho fijo, largo optimizado automáticamente.</p>
             </div>
             <div class="field-group">
-              <label for="fabricWidth">Ancho de tela (cm)</label>
+              <label for="fabricWidth">
+                Ancho de tela (cm)
+                <button
+                  type="button"
+                  class="info-trigger"
+                  aria-label="Ancho fijo del rollo de tela. El largo se calcula automáticamente."
+                  data-tooltip="Ancho fijo del rollo de tela. El largo se calcula automáticamente."
+                >ⓘ</button>
+              </label>
               <input id="fabricWidth" name="fabricWidth" type="number" step="0.1" min="1" inputmode="decimal" />
               <p class="helper-text" data-field="fabricWidth"></p>
             </div>
             <div class="field-pair">
               <div class="field-group">
-                <label for="marginX">Margen lateral (cm)</label>
+                <label for="marginX">
+                  Margen lateral (cm)
+                  <button
+                    type="button"
+                    class="info-trigger"
+                    aria-label="Margen aplicado a ambos lados de la tela. Valor en centímetros (cm)."
+                    data-tooltip="Margen aplicado a ambos lados de la tela. Valor en centímetros (cm)."
+                  >ⓘ</button>
+                </label>
                 <input id="marginX" name="marginX" type="number" step="0.1" min="0" inputmode="decimal" />
                 <p class="helper-text" data-field="marginX"></p>
               </div>
               <div class="field-group">
-                <label for="marginY">Margen superior/inferior (cm)</label>
+                <label for="marginY">
+                  Margen superior/inferior (cm)
+                  <button
+                    type="button"
+                    class="info-trigger"
+                    aria-label="Margen aplicado al inicio y fin del largo de la tela. Valor en centímetros (cm)."
+                    data-tooltip="Margen aplicado al inicio y fin del largo de la tela. Valor en centímetros (cm)."
+                  >ⓘ</button>
+                </label>
                 <input id="marginY" name="marginY" type="number" step="0.1" min="0" inputmode="decimal" />
                 <p class="helper-text" data-field="marginY"></p>
               </div>
@@ -109,35 +133,106 @@
         </div>
         <dl class="metrics" id="metricsList">
           <div>
-            <dt>Largo total</dt>
+            <dt>
+              Largo total
+              <span
+                class="info-tip"
+                role="button"
+                tabindex="0"
+                aria-label="Largo total de tela necesario para ubicar todas las piezas según el layout actual."
+                data-tooltip="Largo total de tela necesario para ubicar todas las piezas según el layout actual."
+              >ⓘ</span>
+            </dt>
             <dd id="metricLength">--</dd>
           </div>
           <div>
-            <dt>Uso de tela</dt>
+            <dt>
+              Uso de tela
+              <button
+                type="button"
+                class="info-trigger"
+                aria-label="Porcentaje del área total de la tela que se aprovecha con los cortes configurados."
+                data-tooltip="Porcentaje del área total de la tela que se aprovecha con los cortes configurados."
+              >ⓘ</button>
+            </dt>
             <dd id="metricUsage">--</dd>
           </div>
           <div>
-            <dt>Piezas</dt>
+            <dt>
+              Piezas
+              <span
+                class="info-tip"
+                role="button"
+                tabindex="0"
+                aria-label="Cantidad total de piezas colocadas en el layout, sumando todos los tipos de corte."
+                data-tooltip="Cantidad total de piezas colocadas en el layout, sumando todos los tipos de corte."
+              >ⓘ</span>
+            </dt>
             <dd id="metricPieces">--</dd>
           </div>
           <div>
-            <dt>Residuo interno</dt>
+            <dt>
+              Residuo interno
+              <span
+                class="info-tip"
+                role="button"
+                tabindex="0"
+                aria-label="Área de tela sin utilizar dentro del largo total calculado. Incluye huecos y espacios entre piezas."
+                data-tooltip="Área de tela sin utilizar dentro del largo total calculado. Incluye huecos y espacios entre piezas."
+              >ⓘ</span>
+            </dt>
             <dd id="metricInternalWaste">--</dd>
           </div>
           <div>
-            <dt>Residuo vertical</dt>
+            <dt>
+              Residuo vertical
+              <span
+                class="info-tip"
+                role="button"
+                tabindex="0"
+                aria-label="Largo adicional de tela utilizado debido a huecos verticales que no pudieron compactarse."
+                data-tooltip="Largo adicional de tela utilizado debido a huecos verticales que no pudieron compactarse."
+              >ⓘ</span>
+            </dt>
             <dd id="metricVerticalWaste">--</dd>
           </div>
           <div>
-            <dt>Residuo horizontal</dt>
+            <dt>
+              Residuo horizontal
+              <span
+                class="info-tip"
+                role="button"
+                tabindex="0"
+                aria-label="Espacio horizontal libre acumulado dentro del largo utilizado que no afecta el largo total, pero reduce eficiencia."
+                data-tooltip="Espacio horizontal libre acumulado dentro del largo utilizado que no afecta el largo total, pero reduce eficiencia."
+              >ⓘ</span>
+            </dt>
             <dd id="metricHorizontalWaste">--</dd>
           </div>
           <div>
-            <dt>Layout score</dt>
+            <dt>
+              Layout score
+              <span
+                class="info-tip"
+                role="button"
+                tabindex="0"
+                aria-label="Puntaje global de calidad del layout (0–100), considerando aprovechamiento de tela y desperdicio interno."
+                data-tooltip="Puntaje global de calidad del layout (0–100), considerando aprovechamiento de tela y desperdicio interno."
+              >ⓘ</span>
+            </dt>
             <dd id="metricScore">--</dd>
           </div>
           <div>
-            <dt>Layout subóptimo</dt>
+            <dt>
+              Layout subóptimo
+              <span
+                class="info-tip"
+                role="button"
+                tabindex="0"
+                aria-label="Indica si se detectaron espacios aprovechables donde podrían ubicarse piezas sin aumentar el largo de tela."
+                data-tooltip="Indica si se detectaron espacios aprovechables donde podrían ubicarse piezas sin aumentar el largo de tela."
+              >ⓘ</span>
+            </dt>
             <dd id="metricSuboptimal">--</dd>
           </div>
         </dl>
@@ -168,7 +263,7 @@
         </div>
         <div class="piece-row__grid">
           <label class="field-group">
-            <span>Etiqueta</span>
+            <span>Ref</span>
             <input type="text" data-field="label" maxlength="40" />
           </label>
           <label class="field-group">

@@ -47,6 +47,8 @@
   const exportBtn = document.getElementById('exportBtn');
   const optimizeBtn = document.getElementById('optimizeBtn');
   const themeToggle = document.getElementById('themeToggle');
+  const tooltipTriggers = Array.from(document.querySelectorAll('[data-tooltip]'));
+  const TOOLTIP_ID = 'fabric-tooltip';
 
   const STATUS_MESSAGES = {
     pending: 'Haz clic en "Optimizar" para recalcular.',
@@ -54,14 +56,17 @@
   };
 
   const state = {
-    fabric: { widthCm: 150, marginX: 1, marginY: 1 },
+    fabric: { widthCm: 180, marginX: 1, marginY: 1 },
     spacing: { gapX: 0.5, gapY: 0.5 },
     pieces: PIECE_DEFAULTS.map(createPiece)
   };
 
   const FLOAT_EPS = 1e-6;
+  const REF_PLACEHOLDER_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
   let lastLayout = null;
+  let tooltipEl = null;
+  let tooltipActiveTrigger = null;
 
   init();
 
@@ -74,7 +79,13 @@
     renderPieceRows();
     syncScalarInputs();
     setStatus(STATUS_MESSAGES.pending);
-    window.addEventListener('resize', () => renderPreview(lastLayout, true));
+    window.addEventListener('resize', () => {
+      renderPreview(lastLayout, true);
+      refreshTooltipPosition();
+    });
+    // Keep tooltip anchored while scrolling within nested panels.
+    window.addEventListener('scroll', refreshTooltipPosition, true);
+    bindTooltips();
   }
 
   function bindScalarInputs() {
@@ -96,6 +107,21 @@
   function bindOptimizeButton() {
     if (!optimizeBtn) return;
     optimizeBtn.addEventListener('click', runOptimization);
+  }
+
+  function bindTooltips() {
+    if (!tooltipTriggers.length) return;
+    tooltipTriggers.forEach((trigger) => {
+      trigger.addEventListener('mouseenter', handleTooltipEnter);
+      trigger.addEventListener('mouseleave', hideTooltip);
+      trigger.addEventListener('focus', handleTooltipEnter);
+      trigger.addEventListener('blur', hideTooltip);
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        hideTooltip();
+      }
+    });
   }
 
   function bindThemeToggle() {
@@ -186,10 +212,10 @@
 
   function handleAddPiece() {
     if (state.pieces.length >= MAX_PIECE_TYPES) return;
-    const nextIndex = state.pieces.length + 1;
+    const nextIndex = state.pieces.length;
     state.pieces.push(
       createPiece({
-        label: `Corte ${nextIndex}`,
+        label: `Corte ${getRefPlaceholder(nextIndex)}`,
         width: 20,
         height: 20,
         quantity: 1
@@ -271,9 +297,12 @@
       const clone = pieceTemplate.content.firstElementChild.cloneNode(true);
       clone.dataset.pieceId = piece.id;
       const title = clone.querySelector('.piece-row__title');
-      if (title) title.textContent = piece.label || `Corte ${index + 1}`;
+      if (title) title.textContent = piece.label || `Corte ${getRefPlaceholder(index)}`;
       const labelInput = clone.querySelector('input[data-field="label"]');
-      if (labelInput) labelInput.value = piece.label;
+      if (labelInput) {
+        labelInput.value = piece.label;
+        labelInput.placeholder = getRefPlaceholder(index);
+      }
       const widthInput = clone.querySelector('input[data-field="width"]');
       if (widthInput) widthInput.value = piece.width;
       const heightInput = clone.querySelector('input[data-field="height"]');
@@ -286,6 +315,17 @@
     updatePieceLimitHelper();
   }
 
+  function getRefPlaceholder(index) {
+    let n = index + 1;
+    let result = '';
+    while (n > 0) {
+      const remainder = (n - 1) % REF_PLACEHOLDER_ALPHABET.length;
+      result = REF_PLACEHOLDER_ALPHABET[remainder] + result;
+      n = Math.floor((n - 1) / REF_PLACEHOLDER_ALPHABET.length);
+    }
+    return result || 'A';
+  }
+
   function updatePieceLimitHelper() {
     if (!pieceLimitHelper) return;
     pieceLimitHelper.textContent = `${state.pieces.length} / ${MAX_PIECE_TYPES} tipos configurados`;
@@ -296,7 +336,10 @@
 
   function fallbackPieceTitle(pieceId) {
     const index = state.pieces.findIndex((p) => p.id === pieceId);
-    return `Corte ${index + 1}`;
+    if (index < 0) {
+      return 'Corte';
+    }
+    return `Corte ${getRefPlaceholder(index)}`;
   }
 
   function syncScalarInputs() {
@@ -857,5 +900,78 @@
     if (lastLayout) {
       renderPreview(lastLayout, true);
     }
+  }
+
+  function handleTooltipEnter(event) {
+    const trigger = event.currentTarget;
+    showTooltip(trigger);
+  }
+
+  function showTooltip(trigger) {
+    if (!trigger) return;
+    tooltipActiveTrigger = trigger;
+    const tooltip = getTooltipElement();
+    tooltip.textContent = trigger.dataset.tooltip || '';
+    tooltip.setAttribute('aria-hidden', tooltip.textContent ? 'false' : 'true');
+    tooltip.classList.add('is-visible');
+    trigger.setAttribute('aria-describedby', TOOLTIP_ID);
+    positionTooltip(trigger);
+  }
+
+  function hideTooltip() {
+    if (tooltipActiveTrigger) {
+      tooltipActiveTrigger.removeAttribute('aria-describedby');
+    }
+    tooltipActiveTrigger = null;
+    const tooltip = getTooltipElement();
+    tooltip.classList.remove('is-visible');
+    tooltip.setAttribute('aria-hidden', 'true');
+  }
+
+  function refreshTooltipPosition() {
+    if (tooltipActiveTrigger) {
+      positionTooltip(tooltipActiveTrigger);
+    }
+  }
+
+  function positionTooltip(trigger) {
+    if (!trigger) return;
+    const tooltip = getTooltipElement();
+    const rect = trigger.getBoundingClientRect();
+    const viewportWidth = document.documentElement.clientWidth || window.innerWidth || 0;
+    const viewportHeight = document.documentElement.clientHeight || window.innerHeight || 0;
+    tooltip.dataset.placement = 'top';
+    const tooltipRect = tooltip.getBoundingClientRect();
+    let top = rect.top - tooltipRect.height - 8;
+    let placement = 'top';
+    if (top < 8) {
+      placement = 'bottom';
+      top = rect.bottom + 8;
+    }
+    if (placement === 'bottom' && top + tooltipRect.height > viewportHeight - 8) {
+      placement = 'top';
+      top = rect.top - tooltipRect.height - 8;
+    }
+    const minTop = 8;
+    const maxTop = Math.max(minTop, viewportHeight - tooltipRect.height - 8);
+    top = Math.min(Math.max(top, minTop), maxTop);
+    let left = rect.left + rect.width / 2 - tooltipRect.width / 2;
+    const minLeft = 8;
+    const maxLeft = Math.max(minLeft, viewportWidth - tooltipRect.width - 8);
+    left = Math.min(Math.max(left, minLeft), maxLeft);
+    tooltip.dataset.placement = placement;
+    tooltip.style.left = `${left}px`;
+    tooltip.style.top = `${top}px`;
+  }
+
+  function getTooltipElement() {
+    if (tooltipEl) return tooltipEl;
+    tooltipEl = document.createElement('div');
+    tooltipEl.className = 'info-tooltip';
+    tooltipEl.id = TOOLTIP_ID;
+    tooltipEl.setAttribute('role', 'tooltip');
+    tooltipEl.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(tooltipEl);
+    return tooltipEl;
   }
 })();

@@ -224,6 +224,54 @@ input[type="text"] {
   color: var(--color-danger);
 }
 
+.info-trigger,
+.info-tip {
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  padding: 0;
+  margin-left: 0.3rem;
+  cursor: help;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  font-size: 0.85rem;
+}
+
+.info-trigger:hover,
+.info-trigger:focus-visible,
+.info-tip:hover,
+.info-tip:focus-visible {
+  color: var(--color-accent);
+}
+
+.info-tooltip {
+  position: fixed;
+  z-index: 999;
+  max-width: 260px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-panel-border);
+  border-radius: var(--radius-sm);
+  padding: 0.5rem 0.65rem;
+  box-shadow: 0 14px 30px rgba(12, 16, 22, 0.25);
+  pointer-events: none;
+  opacity: 0;
+  transform: scale(0.97);
+  transition: opacity var(--transition-fast), transform var(--transition-fast);
+  line-height: 1.4;
+  font-size: 0.82rem;
+  white-space: normal;
+  word-break: break-word;
+  text-align: left;
+}
+
+.info-tooltip.is-visible {
+  opacity: 1;
+  transform: scale(1);
+}
+
 .piece-list {
   display: flex;
   flex-direction: column;
