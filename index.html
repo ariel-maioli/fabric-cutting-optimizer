@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Optimización de Corte de Tela</title>
+    <link rel="stylesheet" href="assets/css/styles.css" />
+    <script>
+      (function () {
+        try {
+          var stored = window.localStorage.getItem('fabric-theme');
+          if (stored) {
+            document.documentElement.setAttribute('data-theme', stored);
+            return;
+          }
+          if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.setAttribute('data-theme', 'dark');
+          }
+        } catch (err) {
+          /* no-op */
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="branding">
+        <h1>PeeP Rosario</h1>
+        <p>Optimizador de corte para rollos de tela</p>
+      </div>
+      <button type="button" class="theme-switch" aria-label="Cambiar tema" role="switch" aria-checked="false" id="themeToggle">
+        <span class="theme-switch__icon" aria-hidden="true">◑</span>
+        <span class="theme-switch__label">Claro</span>
+      </button>
+    </header>
+
+    <main class="app-shell">
+      <section class="panel form-panel" aria-labelledby="formTitle">
+        <div class="panel-header">
+          <h2 id="formTitle">Parámetros</h2>
+        </div>
+        <form id="configForm" novalidate>
+          <div class="param-section" aria-label="Especificación de tela">
+            <div class="param-section__title-row">
+              <h3 class="param-title">Tela</h3>
+              <p class="param-description">Ancho fijo, largo optimizado automáticamente.</p>
+            </div>
+            <div class="field-group">
+              <label for="fabricWidth">Ancho de tela (cm)</label>
+              <input id="fabricWidth" name="fabricWidth" type="number" step="0.1" min="1" inputmode="decimal" />
+              <p class="helper-text" data-field="fabricWidth"></p>
+            </div>
+            <div class="field-pair">
+              <div class="field-group">
+                <label for="marginX">Margen lateral (cm)</label>
+                <input id="marginX" name="marginX" type="number" step="0.1" min="0" inputmode="decimal" />
+                <p class="helper-text" data-field="marginX"></p>
+              </div>
+              <div class="field-group">
+                <label for="marginY">Margen superior/inferior (cm)</label>
+                <input id="marginY" name="marginY" type="number" step="0.1" min="0" inputmode="decimal" />
+                <p class="helper-text" data-field="marginY"></p>
+              </div>
+            </div>
+          </div>
+
+          <div class="param-section" aria-label="Separaciones">
+            <div class="param-section__title-row">
+              <h3 class="param-title">Separaciones</h3>
+              <p class="param-description">Sincronizadas con el algoritmo shelf.</p>
+            </div>
+            <div class="field-pair">
+              <div class="field-group">
+                <label for="gapX">Gap horizontal (cm)</label>
+                <input id="gapX" name="gapX" type="number" step="0.1" min="0" inputmode="decimal" />
+                <p class="helper-text" data-field="gapX"></p>
+              </div>
+              <div class="field-group">
+                <label for="gapY">Gap vertical (cm)</label>
+                <input id="gapY" name="gapY" type="number" step="0.1" min="0" inputmode="decimal" />
+                <p class="helper-text" data-field="gapY"></p>
+              </div>
+            </div>
+          </div>
+
+          <div class="param-section" aria-label="Tipos de corte">
+            <div class="piece-section__header">
+              <div>
+                <h3 class="param-title">Tipos de corte</h3>
+                <p class="param-description">Hasta 10 tipos, sin rotaciones.</p>
+              </div>
+              <button type="button" class="secondary" id="addPieceBtn">Agregar corte</button>
+            </div>
+            <div id="pieceList" class="piece-list" role="list" aria-live="polite"></div>
+            <p class="helper-text" id="pieceLimitHelper">0 / 10 tipos configurados</p>
+          </div>
+
+          <div class="form-footer">
+            <div class="status" id="formStatus" aria-live="polite"></div>
+          </div>
+        </form>
+      </section>
+
+      <section class="panel metrics-panel" aria-labelledby="metricsTitle">
+        <div class="panel-header">
+          <h2 id="metricsTitle">Métricas</h2>
+        </div>
+        <dl class="metrics" id="metricsList">
+          <div>
+            <dt>Largo total</dt>
+            <dd id="metricLength">--</dd>
+          </div>
+          <div>
+            <dt>Bandas</dt>
+            <dd id="metricBands">--</dd>
+          </div>
+          <div>
+            <dt>Piezas</dt>
+            <dd id="metricPieces">--</dd>
+          </div>
+          <div>
+            <dt>Uso de tela</dt>
+            <dd id="metricUsage">--</dd>
+          </div>
+        </dl>
+      </section>
+
+      <section class="panel preview-panel" aria-labelledby="previewTitle">
+        <div class="panel-header">
+          <h2 id="previewTitle">Previsualización</h2>
+          <div class="legend">
+            <span>Escala horizontal exacta</span>
+            <span>Largo comprimido para caber en pantalla</span>
+          </div>
+        </div>
+        <div class="preview-stage-wrapper" aria-live="polite">
+          <canvas id="previewCanvas" width="960" height="520" role="img" aria-label="Distribución de cortes sobre la tela"></canvas>
+        </div>
+        <div class="preview-actions">
+          <button type="button" class="primary" id="exportBtn">Exportar PNG</button>
+        </div>
+      </section>
+    </main>
+
+    <template id="pieceRowTemplate">
+      <article class="piece-row" data-piece-row>
+        <div class="piece-row__header">
+          <span class="piece-row__title">Corte</span>
+          <button type="button" class="ghost" data-action="remove" aria-label="Eliminar corte">✕</button>
+        </div>
+        <div class="piece-row__grid">
+          <label class="field-group">
+            <span>Etiqueta</span>
+            <input type="text" data-field="label" maxlength="40" />
+          </label>
+          <label class="field-group">
+            <span>Ancho (cm)</span>
+            <input type="number" step="0.1" min="0.1" inputmode="decimal" data-field="width" />
+          </label>
+          <label class="field-group">
+            <span>Alto (cm)</span>
+            <input type="number" step="0.1" min="0.1" inputmode="decimal" data-field="height" />
+          </label>
+          <label class="field-group">
+            <span>Cantidad</span>
+            <input type="number" min="0" step="1" inputmode="numeric" data-field="quantity" />
+          </label>
+        </div>
+      </article>
+    </template>
+
+    <script src="assets/js/app.js" defer></script>
+  </body>
+</html>
