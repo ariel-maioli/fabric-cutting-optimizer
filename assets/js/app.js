@@ -425,6 +425,7 @@
       };
       splitFreeRectangles(freeRects, occupiedRect);
       pruneFreeRectangles(freeRects);
+      mergeFreeRectangles(freeRects);
     }
 
     const maxBottom = placements.reduce((max, rect) => Math.max(max, rect.y + rect.height), spec.marginY);
@@ -555,6 +556,42 @@
           i -= 1;
           break;
         }
+      }
+    }
+  }
+
+  function mergeFreeRectangles(freeRects) {
+    let merged = true;
+    while (merged) {
+      merged = false;
+      for (let i = 0; i < freeRects.length; i += 1) {
+        for (let j = i + 1; j < freeRects.length; j += 1) {
+          const a = freeRects[i];
+          const b = freeRects[j];
+          if (Math.abs(a.y - b.y) <= FLOAT_EPS && Math.abs(a.height - b.height) <= FLOAT_EPS) {
+            const touchesHoriz = Math.abs(a.x + a.width - b.x) <= FLOAT_EPS || Math.abs(b.x + b.width - a.x) <= FLOAT_EPS;
+            if (touchesHoriz) {
+              const minX = Math.min(a.x, b.x);
+              const maxX = Math.max(a.x + a.width, b.x + b.width);
+              freeRects[i] = { x: minX, y: a.y, width: maxX - minX, height: a.height };
+              freeRects.splice(j, 1);
+              merged = true;
+              break;
+            }
+          }
+          if (Math.abs(a.x - b.x) <= FLOAT_EPS && Math.abs(a.width - b.width) <= FLOAT_EPS) {
+            const touchesVert = Math.abs(a.y + a.height - b.y) <= FLOAT_EPS || Math.abs(b.y + b.height - a.y) <= FLOAT_EPS;
+            if (touchesVert) {
+              const minY = Math.min(a.y, b.y);
+              const maxY = Math.max(a.y + a.height, b.y + b.height);
+              freeRects[i] = { x: a.x, y: minY, width: a.width, height: maxY - minY };
+              freeRects.splice(j, 1);
+              merged = true;
+              break;
+            }
+          }
+        }
+        if (merged) break;
       }
     }
   }
