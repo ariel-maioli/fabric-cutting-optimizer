@@ -1,3 +1,8 @@
+Corte A: 25 × 35 (4 unidades)
+Corte B: 18 × 28 (6 unidades)
+Corte C: 5 × 28 (14 unidades)
+Corte D: 9.5 × 4 (92 unidades)
+
 **4. “Etiqueta” → “Ref” + placeholders automáticos**
 Improve semantics of the cut definition panel.
 
