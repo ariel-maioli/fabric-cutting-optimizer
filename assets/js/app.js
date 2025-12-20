@@ -41,7 +41,13 @@
   const statusEl = document.getElementById('formStatus');
   const previewCanvas = document.getElementById('previewCanvas');
   const exportBtn = document.getElementById('exportBtn');
+  const optimizeBtn = document.getElementById('optimizeBtn');
   const themeToggle = document.getElementById('themeToggle');
+
+  const STATUS_MESSAGES = {
+    pending: 'Haz clic en "Optimizar" para recalcular.',
+    success: 'Optimización completada.'
+  };
 
   const state = {
     fabric: { widthCm: 150, marginX: 1, marginY: 1 },
@@ -49,20 +55,22 @@
     pieces: PIECE_DEFAULTS.map(createPiece)
   };
 
+  const FLOAT_EPS = 1e-6;
+
   let lastLayout = null;
-  let rafId = null;
 
   init();
 
   function init() {
     bindScalarInputs();
     bindPieceEvents();
+    bindOptimizeButton();
     bindThemeToggle();
     bindExport();
     renderPieceRows();
     syncScalarInputs();
-    queueRecalc();
-    window.addEventListener('resize', () => queueRecalc(true));
+    setStatus(STATUS_MESSAGES.pending);
+    window.addEventListener('resize', () => renderPreview(lastLayout, true));
   }
 
   function bindScalarInputs() {
@@ -81,6 +89,11 @@
     pieceList.addEventListener('click', handlePieceClick);
   }
 
+  function bindOptimizeButton() {
+    if (!optimizeBtn) return;
+    optimizeBtn.addEventListener('click', runOptimization);
+  }
+
   function bindThemeToggle() {
     if (!themeToggle) return;
     const current = document.documentElement.getAttribute('data-theme') || 'light';
@@ -94,7 +107,7 @@
   function bindExport() {
     if (!exportBtn) return;
     exportBtn.addEventListener('click', () => {
-      if (!lastLayout || !lastLayout.bands.length) {
+      if (!lastLayout || !Array.isArray(lastLayout.placements) || !lastLayout.placements.length) {
         setStatus('Genera una distribución antes de exportar.');
         return;
       }
@@ -117,14 +130,14 @@
     if (Number.isNaN(value)) {
       setHelper(key, 'Requerido.');
       setScalarValue(meta.path, NaN);
-      queueRecalc();
+      markDirty();
       return;
     }
     const sanitized = meta.min != null ? Math.max(meta.min, value) : value;
     input.value = sanitized;
     setScalarValue(meta.path, sanitized);
     setHelper(key, '');
-    queueRecalc();
+    markDirty();
   }
 
   function validateScalarField(key) {
@@ -163,6 +176,10 @@
     helper.dataset.error = message ? 'true' : 'false';
   }
 
+  function markDirty(message) {
+    setStatus(message || STATUS_MESSAGES.pending);
+  }
+
   function handleAddPiece() {
     if (state.pieces.length >= MAX_PIECE_TYPES) return;
     const nextIndex = state.pieces.length + 1;
@@ -175,7 +192,7 @@
       })
     );
     renderPieceRows();
-    queueRecalc();
+    markDirty();
   }
 
   function handlePieceInput(event) {
@@ -191,7 +208,7 @@
       piece.label = target.value.trim();
       const title = row.querySelector('.piece-row__title');
       if (title) title.textContent = piece.label || fallbackPieceTitle(pieceId);
-      queueRecalc();
+      markDirty();
       return;
     }
     const value = field === 'quantity' ? parseInt(target.value, 10) : parseFloat(target.value);
@@ -207,7 +224,7 @@
       target.value = piece[field];
     }
     target.removeAttribute('aria-invalid');
-    queueRecalc();
+    markDirty();
   }
 
   function handlePieceClick(event) {
@@ -224,12 +241,12 @@
     if (state.pieces.length === 1) {
       state.pieces[0] = createPiece({ label: 'Corte 1', width: 20, height: 20, quantity: 1 });
       renderPieceRows();
-      queueRecalc();
+      markDirty();
       return;
     }
     state.pieces = state.pieces.filter((piece) => piece.id !== id);
     renderPieceRows();
-    queueRecalc();
+    markDirty();
   }
 
   function createPiece(data) {
@@ -291,16 +308,18 @@
     return path.reduce((acc, key) => (acc ? acc[key] : undefined), state);
   }
 
-  function queueRecalc() {
-    if (rafId) cancelAnimationFrame(rafId);
-    rafId = requestAnimationFrame(() => {
-      rafId = null;
-      const snapshot = computeSnapshot();
-      lastLayout = snapshot.layout;
-      updateMetrics(snapshot.metrics);
+  function runOptimization() {
+    const snapshot = computeSnapshot();
+    lastLayout = snapshot.layout;
+    updateMetrics(snapshot.metrics);
+    if (snapshot.layout) {
+      setStatus(snapshot.status || STATUS_MESSAGES.success);
+    } else if (snapshot.status) {
       setStatus(snapshot.status);
-      renderPreview(snapshot.layout);
-    });
+    } else {
+      setStatus('');
+    }
+    renderPreview(snapshot.layout);
   }
 
   function computeSnapshot() {
@@ -356,6 +375,8 @@
   }
 
   function sortPieces(pieces) {
+    // Ordenar por alto reduce fragmentación
+    // y mejora el aprovechamiento del largo en shelf.
     return pieces.slice().sort((a, b) => {
       if (b.height !== a.height) return b.height - a.height;
       if (b.width !== a.width) return b.width - a.width;
@@ -368,52 +389,51 @@
     if (printableWidth <= 0) {
       return { error: 'Sin ancho útil para ubicar piezas.' };
     }
-    const bands = [];
-    let cursorY = spec.marginY;
-    let currentBand = null;
+    const gapX = Math.max(0, spec.gapX || 0);
+    const gapY = Math.max(0, spec.gapY || 0);
+    const estimatedHeight = pieces.reduce((sum, piece) => sum + piece.height, 0) + gapY * Math.max(0, pieces.length - 1);
+    const tallestPiece = pieces.reduce((max, piece) => Math.max(max, piece.height), 0);
+    const initialHeight = Math.max(estimatedHeight, tallestPiece + gapY, 1);
+    const freeRects = [createFreeRect(spec.marginX, spec.marginY, printableWidth, initialHeight)];
+    const placements = [];
     let pieceArea = 0;
-
-    const startBand = () => {
-      currentBand = {
-        id: `band-${bands.length + 1}`,
-        index: bands.length,
-        y: cursorY,
-        height: 0,
-        widthUsed: 0,
-        placements: []
-      };
-    };
-
-    const finalizeBand = () => {
-      if (!currentBand) return;
-      bands.push(currentBand);
-      cursorY += currentBand.height + spec.gapY;
-      currentBand = null;
-    };
 
     for (let i = 0; i < pieces.length; i += 1) {
       const piece = pieces[i];
       pieceArea += piece.width * piece.height;
-      if (piece.width > printableWidth + 1e-6) {
+      if (piece.width > printableWidth + FLOAT_EPS) {
         return { error: `El ancho de "${piece.label}" supera el ancho útil.` };
       }
-      if (!currentBand) startBand();
-      if (!tryPlaceInBand(currentBand, piece, spec, printableWidth)) {
-        finalizeBand();
-        startBand();
-        if (!tryPlaceInBand(currentBand, piece, spec, printableWidth)) {
-          return { error: `No se pudo ubicar la pieza "${piece.label}".` };
-        }
+      const node = findBestFreeRect(freeRects, piece, gapX, gapY);
+      if (!node) {
+        return { error: `No se pudo ubicar la pieza "${piece.label}".` };
       }
+      placements.push({
+        pieceId: piece.id,
+        label: piece.label,
+        width: piece.width,
+        height: piece.height,
+        x: node.x,
+        y: node.y
+      });
+
+      const occupiedRect = {
+        x: node.x,
+        y: node.y,
+        width: piece.width + gapX,
+        height: piece.height + gapY
+      };
+      splitFreeRectangles(freeRects, occupiedRect);
+      pruneFreeRectangles(freeRects);
     }
-    finalizeBand();
 
-    const usedHeight = bands.reduce((sum, band) => sum + band.height, 0);
-    const verticalGaps = Math.max(0, bands.length - 1) * spec.gapY;
-    const totalLengthCm = usedHeight + verticalGaps + spec.marginY * 2;
+    const maxBottom = placements.reduce((max, rect) => Math.max(max, rect.y + rect.height), spec.marginY);
+    const totalLengthCm = Math.max(spec.marginY * 2, maxBottom + spec.marginY);
 
+    const virtualBand = { id: 'band-virtual', placements: placements.slice() };
     return {
-      bands,
+      placements,
+      bands: placements.length ? [virtualBand] : [],
       totalLengthCm,
       printableWidth,
       spec,
@@ -421,38 +441,161 @@
     };
   }
 
-  function tryPlaceInBand(band, piece, spec, printableWidth) {
-    const gap = band.placements.length > 0 ? spec.gapX : 0;
-    const projectedWidth = band.widthUsed + gap + piece.width;
-    if (projectedWidth > printableWidth + 1e-6) {
-      return false;
+  function createFreeRect(x, y, width, height) {
+    return { x, y, width, height };
+  }
+
+  function findBestFreeRect(freeRects, piece, gapX, gapY) {
+    const effWidth = piece.width + gapX;
+    const effHeight = piece.height + gapY;
+    let best = null;
+    for (let i = 0; i < freeRects.length; i += 1) {
+      const rect = freeRects[i];
+      if (rect.width + FLOAT_EPS < effWidth || rect.height + FLOAT_EPS < effHeight) continue;
+      const areaFit = rect.width * rect.height - effWidth * effHeight;
+      const leftoverHoriz = rect.width - effWidth;
+      const leftoverVert = rect.height - effHeight;
+      const shortSide = Math.min(leftoverHoriz, leftoverVert);
+      const yDelta = best ? rect.y - best.rect.y : 0;
+      const xDelta = best ? rect.x - best.rect.x : 0;
+      const replace =
+        !best ||
+        yDelta < -FLOAT_EPS ||
+        (Math.abs(yDelta) <= FLOAT_EPS && (xDelta < -FLOAT_EPS ||
+          (Math.abs(xDelta) <= FLOAT_EPS && (areaFit < best.areaFit - FLOAT_EPS ||
+            (Math.abs(areaFit - best.areaFit) <= FLOAT_EPS && shortSide < best.shortSide - FLOAT_EPS)))));
+      if (replace) {
+        best = { x: rect.x, y: rect.y, rect, areaFit, shortSide };
+      }
     }
-    const placement = {
-      pieceId: piece.id,
-      label: piece.label,
-      width: piece.width,
-      height: piece.height,
-      x: spec.marginX + band.widthUsed + gap,
-      y: band.y
-    };
-    band.placements.push(placement);
-    band.widthUsed = projectedWidth;
-    band.height = Math.max(band.height, piece.height);
-    return true;
+    return best;
+  }
+
+  function splitFreeRectangles(freeRects, usedRect) {
+    const updated = [];
+    for (let i = 0; i < freeRects.length; i += 1) {
+      const free = freeRects[i];
+      if (!rectsIntersect(free, usedRect)) {
+        updated.push(free);
+        continue;
+      }
+      const fragments = splitRect(free, usedRect);
+      fragments.forEach((fragment) => {
+        if (fragment.width > FLOAT_EPS && fragment.height > FLOAT_EPS) {
+          updated.push(fragment);
+        }
+      });
+    }
+    freeRects.length = 0;
+    freeRects.push(...updated);
+  }
+
+  function splitRect(free, used) {
+    const result = [];
+    const freeRight = free.x + free.width;
+    const freeBottom = free.y + free.height;
+    const usedRight = used.x + used.width;
+    const usedBottom = used.y + used.height;
+
+    if (used.x > free.x) {
+      result.push({
+        x: free.x,
+        y: free.y,
+        width: used.x - free.x,
+        height: free.height
+      });
+    }
+
+    if (usedRight < freeRight) {
+      result.push({
+        x: usedRight,
+        y: free.y,
+        width: freeRight - usedRight,
+        height: free.height
+      });
+    }
+
+    const overlapX1 = Math.max(free.x, used.x);
+    const overlapX2 = Math.min(freeRight, usedRight);
+
+    if (overlapX2 > overlapX1) {
+      if (used.y > free.y) {
+        result.push({
+          x: overlapX1,
+          y: free.y,
+          width: overlapX2 - overlapX1,
+          height: used.y - free.y
+        });
+      }
+      if (usedBottom < freeBottom) {
+        result.push({
+          x: overlapX1,
+          y: usedBottom,
+          width: overlapX2 - overlapX1,
+          height: freeBottom - usedBottom
+        });
+      }
+    }
+
+    return result;
+  }
+
+  function pruneFreeRectangles(freeRects) {
+    for (let i = 0; i < freeRects.length; i += 1) {
+      for (let j = i + 1; j < freeRects.length; j += 1) {
+        const rectA = freeRects[i];
+        const rectB = freeRects[j];
+        if (rectContains(rectA, rectB)) {
+          freeRects.splice(j, 1);
+          j -= 1;
+          continue;
+        }
+        if (rectContains(rectB, rectA)) {
+          freeRects.splice(i, 1);
+          i -= 1;
+          break;
+        }
+      }
+    }
+  }
+
+  function rectsIntersect(a, b) {
+    return a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y;
+  }
+
+  function rectContains(outer, inner) {
+    return (
+      outer.x <= inner.x + FLOAT_EPS &&
+      outer.y <= inner.y + FLOAT_EPS &&
+      outer.x + outer.width >= inner.x + inner.width - FLOAT_EPS &&
+      outer.y + outer.height >= inner.y + inner.height - FLOAT_EPS
+    );
   }
 
   function buildMetrics(layout, totalPieces) {
     if (!layout) return null;
+    const placements = Array.isArray(layout.placements) ? layout.placements : [];
     const totalLength = layout.totalLengthCm;
-    const bandCount = layout.bands.length;
     const fabricArea = layout.spec.widthCm * Math.max(totalLength, 0);
     const usage = fabricArea > 0 ? Math.min(100, (layout.pieceArea / fabricArea) * 100) : 0;
+    const bandCount = countDistinctRows(placements);
     return {
       lengthCm: totalLength,
       bands: bandCount,
       pieces: totalPieces,
       usagePct: usage
     };
+  }
+
+  function countDistinctRows(placements) {
+    if (!Array.isArray(placements) || !placements.length) return 0;
+    const precision = 3;
+    const seen = new Set();
+    placements.forEach((placement) => {
+      const normalized = (placement.y || 0).toFixed(precision);
+      seen.add(normalized);
+    });
+    return seen.size;
   }
 
   function updateMetrics(metrics) {
@@ -489,7 +632,8 @@
     if (!ctx) return;
     const metrics = resizeCanvas(previewCanvas, forceRedraw);
     ctx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
-    if (!layout || !layout.bands.length) {
+    const placements = Array.isArray(layout?.placements) ? layout.placements : [];
+    if (!layout || !placements.length) {
       drawEmptyState(ctx, metrics);
       return;
     }
@@ -521,21 +665,28 @@
     ctx.strokeRect(printableX, printableY, printableWidth, printableHeight);
     ctx.setLineDash([]);
 
-    layout.bands.forEach((band, index) => {
-      const fill = index % 2 === 0 ? colors.piecePrimary : colors.pieceSecondary;
-      band.placements.forEach((placement) => {
-        const x = offsetX + placement.x * scaleX;
-        const y = offsetY + placement.y * scaleY;
-        const width = placement.width * scaleX;
-        const height = placement.height * scaleY;
-        ctx.fillStyle = fill;
-        ctx.globalAlpha = 0.75;
-        ctx.fillRect(x, y, width, height);
-        ctx.globalAlpha = 1;
-        ctx.strokeStyle = colors.fabricStroke;
-        ctx.lineWidth = 1.2 * metrics.dpr;
-        ctx.strokeRect(x, y, width, height);
-      });
+    const precision = 3;
+    const distinctRows = Array.from(new Set(placements.map((placement) => (placement.y || 0).toFixed(precision))))
+      .sort((a, b) => parseFloat(a) - parseFloat(b));
+    const rowColors = new Map();
+    distinctRows.forEach((key, index) => {
+      rowColors.set(key, index % 2 === 0 ? colors.piecePrimary : colors.pieceSecondary);
+    });
+
+    placements.forEach((placement) => {
+      const key = (placement.y || 0).toFixed(precision);
+      const fill = rowColors.get(key) || colors.piecePrimary;
+      const x = offsetX + placement.x * scaleX;
+      const y = offsetY + placement.y * scaleY;
+      const width = placement.width * scaleX;
+      const height = placement.height * scaleY;
+      ctx.fillStyle = fill;
+      ctx.globalAlpha = 0.75;
+      ctx.fillRect(x, y, width, height);
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = colors.fabricStroke;
+      ctx.lineWidth = 1.2 * metrics.dpr;
+      ctx.strokeRect(x, y, width, height);
     });
 
     ctx.fillStyle = colors.text;
