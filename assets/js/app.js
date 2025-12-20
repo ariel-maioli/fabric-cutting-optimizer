@@ -33,9 +33,13 @@
 
   const metricEls = {
     length: document.getElementById('metricLength'),
-    bands: document.getElementById('metricBands'),
+    usage: document.getElementById('metricUsage'),
     pieces: document.getElementById('metricPieces'),
-    usage: document.getElementById('metricUsage')
+    internalWaste: document.getElementById('metricInternalWaste'),
+    verticalWaste: document.getElementById('metricVerticalWaste'),
+    horizontalWaste: document.getElementById('metricHorizontalWaste'),
+    score: document.getElementById('metricScore'),
+    suboptimal: document.getElementById('metricSuboptimal')
   };
 
   const statusEl = document.getElementById('formStatus');
@@ -312,6 +316,9 @@
     const snapshot = computeSnapshot();
     lastLayout = snapshot.layout;
     updateMetrics(snapshot.metrics);
+    if (snapshot.metrics?.isSuboptimal) {
+      console.warn('La distribución fue marcada como subóptima.', snapshot.metrics.detectors || {});
+    }
     if (snapshot.layout) {
       setStatus(snapshot.status || STATUS_MESSAGES.success);
     } else if (snapshot.status) {
@@ -421,12 +428,15 @@
     const maxBottom = computeMaxBottom(placements, spec.marginY);
     const totalLengthCm = Math.max(spec.marginY * 2, maxBottom + spec.marginY);
 
+    const finalFreeRects = freeRects.map((rect) => ({ ...rect }));
     return {
       placements,
       totalLengthCm,
       printableWidth,
       spec,
-      pieceArea
+      pieceArea,
+      freeRects: finalFreeRects,
+      maxBottom
     };
   }
 
@@ -577,41 +587,144 @@
   function buildMetrics(layout, totalPieces) {
     if (!layout) return null;
     const placements = Array.isArray(layout.placements) ? layout.placements : [];
-    const totalLength = layout.totalLengthCm;
-    const fabricArea = layout.spec.widthCm * Math.max(totalLength, 0);
-    const usage = fabricArea > 0 ? Math.min(100, (layout.pieceArea / fabricArea) * 100) : 0;
-    const bandCount = countDistinctRows(placements);
+    const placedArea = placements.reduce((sum, placement) => sum + placement.width * placement.height, 0);
+    const printableWidth = Math.max(0, layout.printableWidth || 0);
+    const marginY = layout.spec?.marginY || 0;
+    const maxBottom = Number.isFinite(layout.maxBottom) ? layout.maxBottom : computeMaxBottom(placements, marginY);
+    const usedHeight = Math.max(0, maxBottom - marginY);
+    const activeArea = printableWidth * usedHeight;
+    const clippedFreeRects = clipFreeRectsToBand(layout.freeRects, marginY, maxBottom);
+    const internalWasteArea = clippedFreeRects.reduce((sum, rect) => sum + rect.width * rect.height, 0);
+    const internalWastePct = activeArea > FLOAT_EPS ? Math.min(100, (internalWasteArea / activeArea) * 100) : 0;
+    const usage = activeArea > FLOAT_EPS ? Math.min(100, (placedArea / activeArea) * 100) : 0;
+    const idealHeight = printableWidth > FLOAT_EPS ? placedArea / printableWidth : 0;
+    const verticalWasteCm = Math.max(0, usedHeight - idealHeight);
+    const horizontalWasteCm = usedHeight > FLOAT_EPS ? internalWasteArea / usedHeight : 0;
+    let layoutScore = Math.round(clamp01(activeArea > FLOAT_EPS ? placedArea / activeArea : 0) * 100);
+    const smallestPieceHeight = getSmallestPieceHeight(placements);
+    const detectors = {
+      usableGap: detectUsableGap(clippedFreeRects, placements),
+      verticalPocket: Number.isFinite(smallestPieceHeight) && verticalWasteCm > smallestPieceHeight + FLOAT_EPS,
+      inflatedHeight: idealHeight > FLOAT_EPS && usedHeight > idealHeight * 1.05
+    };
+    const isSuboptimal = Object.values(detectors).some(Boolean);
+    if (isSuboptimal) {
+      layoutScore = Math.max(0, layoutScore - 15);
+    }
     return {
-      lengthCm: totalLength,
-      bands: bandCount,
+      lengthCm: layout.totalLengthCm,
       pieces: totalPieces,
-      usagePct: usage
+      usagePct: usage,
+      internalWasteCm2: internalWasteArea,
+      internalWastePct,
+      verticalWasteCm,
+      horizontalWasteCm,
+      layoutScore,
+      isSuboptimal,
+      detectors
     };
   }
 
-  function countDistinctRows(placements) {
-    if (!Array.isArray(placements) || !placements.length) return 0;
-    const precision = 3;
-    const seen = new Set();
+  function clipFreeRectsToBand(freeRects, minY, maxY) {
+    if (!Array.isArray(freeRects) || !freeRects.length || !Number.isFinite(maxY)) return [];
+    const clipped = [];
+    for (let i = 0; i < freeRects.length; i += 1) {
+      const rect = freeRects[i];
+      if (!rect) continue;
+      const rectTop = Math.max(Number.isFinite(rect.y) ? rect.y : minY, minY);
+      const rectBottomRaw = (Number.isFinite(rect.y) ? rect.y : minY) + (Number.isFinite(rect.height) ? rect.height : maxY - rectTop);
+      const rectBottom = Math.min(rectBottomRaw, maxY);
+      const height = rectBottom - rectTop;
+      const width = Number.isFinite(rect.width) ? rect.width : 0;
+      if (width <= FLOAT_EPS || height <= FLOAT_EPS) continue;
+      clipped.push({
+        x: Number.isFinite(rect.x) ? rect.x : 0,
+        y: rectTop,
+        width,
+        height
+      });
+    }
+    return clipped;
+  }
+
+  function detectUsableGap(freeRects, placements) {
+    if (!Array.isArray(freeRects) || !freeRects.length) return false;
+    if (!Array.isArray(placements) || !placements.length) return false;
+    const uniqueSizes = new Map();
     placements.forEach((placement) => {
-      const normalized = (placement.y || 0).toFixed(precision);
-      seen.add(normalized);
+      const key = `${placement.width}x${placement.height}`;
+      if (!uniqueSizes.has(key)) {
+        uniqueSizes.set(key, { width: placement.width, height: placement.height });
+      }
     });
-    return seen.size;
+    const pieces = Array.from(uniqueSizes.values());
+    for (let i = 0; i < freeRects.length; i += 1) {
+      const rect = freeRects[i];
+      for (let j = 0; j < pieces.length; j += 1) {
+        const piece = pieces[j];
+        if (piece.width <= rect.width + FLOAT_EPS && piece.height <= rect.height + FLOAT_EPS) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  function getSmallestPieceHeight(placements) {
+    if (!Array.isArray(placements) || !placements.length) return Infinity;
+    return placements.reduce((min, placement) => {
+      if (!Number.isFinite(placement.height)) return min;
+      return Math.min(min, placement.height);
+    }, Infinity);
+  }
+
+  function clamp01(value) {
+    if (!Number.isFinite(value)) return 0;
+    if (value <= 0) return 0;
+    if (value >= 1) return 1;
+    return value;
   }
 
   function updateMetrics(metrics) {
     if (!metrics) {
-      metricEls.length.textContent = '--';
-      metricEls.bands.textContent = '--';
-      metricEls.pieces.textContent = '--';
-      metricEls.usage.textContent = '--';
+      Object.values(metricEls).forEach((el) => {
+        if (el) el.textContent = '--';
+      });
       return;
     }
-    metricEls.length.textContent = formatLength(metrics.lengthCm);
-    metricEls.bands.textContent = metrics.bands;
-    metricEls.pieces.textContent = metrics.pieces;
-    metricEls.usage.textContent = `${metrics.usagePct.toFixed(1)}%`;
+    setMetric(metricEls.length, formatLength(metrics.lengthCm));
+    setMetric(metricEls.usage, `${metrics.usagePct.toFixed(1)}%`);
+    setMetric(metricEls.pieces, metrics.pieces);
+    setMetric(metricEls.internalWaste, formatInternalWaste(metrics.internalWasteCm2, metrics.internalWastePct));
+    setMetric(metricEls.verticalWaste, formatWasteLength(metrics.verticalWasteCm));
+    setMetric(metricEls.horizontalWaste, formatHorizontalWaste(metrics.horizontalWasteCm));
+    setMetric(metricEls.score, `${Math.round(metrics.layoutScore)} / 100`);
+    setMetric(metricEls.suboptimal, metrics.isSuboptimal ? 'Sí' : 'No');
+  }
+
+  function setMetric(el, value) {
+    if (el) {
+      el.textContent = value ?? '--';
+    }
+  }
+
+  function formatInternalWaste(area, pct) {
+    if (!Number.isFinite(area) || area < FLOAT_EPS) {
+      return '0.0 cm² (0.0%)';
+    }
+    const pctText = Number.isFinite(pct) ? `${pct.toFixed(1)}%` : '--';
+    return `${area.toFixed(1)} cm² (${pctText})`;
+  }
+
+  function formatWasteLength(value) {
+    if (!Number.isFinite(value)) return '--';
+    if (value <= FLOAT_EPS) return '0.0 cm';
+    return formatLength(value);
+  }
+
+  function formatHorizontalWaste(value) {
+    if (!Number.isFinite(value)) return '--';
+    return `${value.toFixed(2)} cm`;
   }
 
   function formatLength(value) {
