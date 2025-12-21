@@ -308,6 +308,17 @@
       const clone = pieceTemplate.content.firstElementChild.cloneNode(true);
       clone.dataset.pieceId = piece.id;
       clone.dataset.cutId = piece.id;
+      clone.addEventListener('pointerenter', () => {
+        highlightCutRow(piece.id);
+        updatePreviewHighlight(piece.id);
+      });
+      clone.addEventListener('pointerleave', (event) => {
+        if (event.relatedTarget?.closest('[data-piece-row]')) {
+          return;
+        }
+        highlightCutRow(null);
+        updatePreviewHighlight(null);
+      });
       const title = clone.querySelector('.piece-row__title');
       if (title) title.textContent = piece.label || `Corte ${getRefPlaceholder(index)}`;
       const labelInput = clone.querySelector('input[data-field="label"]');
@@ -707,6 +718,7 @@
       return;
     }
     const colors = readThemeColors();
+    const highlightedCutId = previewCanvas.dataset.highlightCutId || '';
     const geometry = getPreviewGeometry(layout, metrics.dpr);
     if (!geometry) {
       drawEmptyState(ctx, metrics);
@@ -738,8 +750,9 @@
       const y = offsetY + placement.y * scaleY;
       const width = placement.width * scaleX;
       const height = placement.height * scaleY;
+      const isDimmed = highlightedCutId && placement.cutId !== highlightedCutId;
       ctx.fillStyle = fill;
-      ctx.globalAlpha = 0.78;
+      ctx.globalAlpha = isDimmed ? 0.2 : 0.85;
       ctx.fillRect(x, y, width, height);
       ctx.globalAlpha = 1;
       ctx.strokeStyle = colors.fabricStroke;
@@ -881,6 +894,7 @@
     previewCanvas.addEventListener('mousemove', handlePreviewPointerMove);
     previewCanvas.addEventListener('mouseleave', () => {
       hideTooltip();
+      updatePreviewHighlight(null);
       highlightCutRow(null);
     });
   }
@@ -888,28 +902,33 @@
   function handlePreviewPointerMove(event) {
     if (!lastLayout || !Array.isArray(lastLayout.placements) || !lastLayout.placements.length) {
       hideTooltip();
+      updatePreviewHighlight(null);
       highlightCutRow(null);
       return;
     }
     const geometry = getPreviewGeometry(lastLayout);
     if (!geometry) {
       hideTooltip();
+      updatePreviewHighlight(null);
       highlightCutRow(null);
       return;
     }
     const coords = getFabricCoordinates(event, geometry);
     if (!coords) {
       hideTooltip();
+      updatePreviewHighlight(null);
       highlightCutRow(null);
       return;
     }
     const placement = findPlacementAt(lastLayout, coords.fabricX, coords.fabricY);
     if (!placement) {
       hideTooltip();
+      updatePreviewHighlight(null);
       highlightCutRow(null);
       return;
     }
     highlightCutRow(placement.cutId);
+    updatePreviewHighlight(placement.cutId);
     const tooltipText = formatPlacementTooltip(placement);
     showPreviewTooltip(tooltipText, event.clientX, event.clientY);
   }
@@ -1021,6 +1040,15 @@
         row.removeAttribute('data-highlighted');
       }
     });
+  }
+
+  function updatePreviewHighlight(cutId) {
+    if (!previewCanvas) return;
+    const current = previewCanvas.dataset.highlightCutId || '';
+    const next = cutId || '';
+    if (current === next) return;
+    previewCanvas.dataset.highlightCutId = next;
+    renderPreview(lastLayout);
   }
 
   function buildCutColorMap(pieces, colors) {
