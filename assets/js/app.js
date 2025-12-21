@@ -97,6 +97,7 @@
     // Keep tooltip anchored while scrolling within nested panels.
     window.addEventListener('scroll', refreshTooltipPosition, true);
     bindTooltips();
+    refreshExportButtonState();
   }
 
   function bindScalarInputs() {
@@ -250,6 +251,7 @@
       const title = row.querySelector('.piece-row__title');
       if (title) title.textContent = piece.label || fallbackPieceTitle(pieceId);
       markDirty();
+      refreshExportButtonState();
       return;
     }
     const value = field === 'quantity' ? parseInt(target.value, 10) : parseFloat(target.value);
@@ -266,6 +268,7 @@
     }
     target.removeAttribute('aria-invalid');
     markDirty();
+    refreshExportButtonState();
   }
 
   function handlePieceClick(event) {
@@ -336,6 +339,7 @@
     });
     pieceList.appendChild(fragment);
     updatePieceLimitHelper();
+    refreshExportButtonState();
   }
 
   function getRefPlaceholder(index) {
@@ -355,6 +359,23 @@
     if (addPieceBtn) {
       addPieceBtn.disabled = state.pieces.length >= MAX_PIECE_TYPES;
     }
+  }
+
+  function hasConfiguredCuts() {
+    return state.pieces.some((piece) => {
+      if (!Number.isFinite(piece?.width) || !Number.isFinite(piece?.height)) {
+        return false;
+      }
+      const quantity = Number.isFinite(piece?.quantity) ? piece.quantity : 0;
+      return quantity > 0;
+    });
+  }
+
+  function refreshExportButtonState() {
+    if (!exportBtn) return;
+    const enabled = hasConfiguredCuts();
+    exportBtn.disabled = !enabled;
+    exportBtn.setAttribute('aria-disabled', enabled ? 'false' : 'true');
   }
 
   function fallbackPieceTitle(pieceId) {
@@ -718,6 +739,8 @@
       return;
     }
     const colors = readThemeColors();
+    const showRuler = previewCanvas.dataset.showRuler !== 'false';
+    const showLengthBadge = previewCanvas.dataset.showLengthBadge !== 'false';
     const highlightedCutId = previewCanvas.dataset.highlightCutId || '';
     const geometry = getPreviewGeometry(layout, metrics.dpr);
     if (!geometry) {
@@ -759,11 +782,12 @@
       ctx.lineWidth = 1.2 * metrics.dpr;
       ctx.strokeRect(x, y, width, height);
     });
-
-    ctx.fillStyle = colors.text;
-    ctx.font = `${14 * metrics.dpr}px "IBM Plex Sans", "Segoe UI", sans-serif`;
-    ctx.fillText(`Ancho: ${layout.spec.widthCm.toFixed(1)} cm`, offsetX, offsetY - 12 * metrics.dpr);
-    ctx.fillText(`Largo: ${formatLength(layout.totalLengthCm)}`, offsetX, offsetY + fabricHeightPx + 20 * metrics.dpr);
+    if (showRuler) {
+      drawHorizontalRuler(ctx, layout, geometry, metrics, colors);
+    }
+    if (showLengthBadge) {
+      drawLengthBadge(ctx, layout, geometry, metrics, colors);
+    }
   }
 
   function resizeCanvas(canvas, force) {
@@ -783,6 +807,105 @@
     ctx.fillStyle = readThemeColors().textMuted;
     ctx.font = `${14 * metrics.dpr}px "IBM Plex Sans", "Segoe UI", sans-serif`;
     ctx.fillText('Completa los parámetros para ver la distribución.', 32 * metrics.dpr, rect.height * metrics.dpr * 0.5);
+  }
+
+  function drawHorizontalRuler(ctx, layout, geometry, metrics, colors) {
+    const widthCm = layout?.spec?.widthCm;
+    if (!Number.isFinite(widthCm) || widthCm <= 0) return;
+    const startX = geometry.offsetX;
+    const endX = startX + widthCm * geometry.scaleX;
+    const baseY = geometry.offsetY - 18 * metrics.dpr;
+    if (baseY < 6 * metrics.dpr) return;
+    ctx.save();
+    ctx.strokeStyle = colors.textMuted;
+    ctx.lineWidth = Math.max(1, metrics.dpr);
+    ctx.beginPath();
+    ctx.moveTo(startX, baseY);
+    ctx.lineTo(endX, baseY);
+    ctx.stroke();
+    const approxPx = 60 * metrics.dpr;
+    let cmStep = approxPx / geometry.scaleX;
+    if (!Number.isFinite(cmStep) || cmStep <= 0) {
+      cmStep = 10;
+    }
+    const normalizedStep = Math.max(5, Math.round(cmStep / 5) * 5);
+    ctx.font = `${9 * metrics.dpr}px "IBM Plex Sans", "Segoe UI", sans-serif`;
+    ctx.textBaseline = 'bottom';
+    let lastTickCm = 0;
+    let tickIndex = 0;
+    const drawTick = (cm, isMajorOverride) => {
+      const x = startX + cm * geometry.scaleX;
+      const isMajor = typeof isMajorOverride === 'boolean' ? isMajorOverride : tickIndex % 2 === 0;
+      const tickHeight = (isMajor ? 10 : 6) * metrics.dpr;
+      ctx.beginPath();
+      ctx.moveTo(x, baseY);
+      ctx.lineTo(x, baseY - tickHeight);
+      ctx.stroke();
+      if (isMajor) {
+        ctx.fillStyle = colors.textMuted;
+        ctx.textAlign = 'center';
+        const labelValue = Math.round(cm * 10) / 10;
+        const labelText = Number.isInteger(labelValue)
+          ? `${labelValue}`
+          : labelValue.toFixed(1).replace(/\.0$/, '');
+        ctx.fillText(labelText, x, baseY - tickHeight - 2 * metrics.dpr);
+      }
+    };
+    for (let cm = 0; cm <= widthCm + FLOAT_EPS; cm += normalizedStep) {
+      drawTick(cm);
+      lastTickCm = cm;
+      tickIndex += 1;
+    }
+    if (widthCm - lastTickCm > FLOAT_EPS) {
+      drawTick(widthCm, true);
+    }
+    ctx.textAlign = 'left';
+    ctx.fillStyle = colors.text;
+    ctx.font = `${11 * metrics.dpr}px "IBM Plex Sans", "Segoe UI", sans-serif`;
+    ctx.fillText(`Ancho ${widthCm.toFixed(1)} cm`, startX, baseY - 14 * metrics.dpr);
+    ctx.restore();
+  }
+
+  function drawLengthBadge(ctx, layout, geometry, metrics, colors) {
+    if (!layout) return;
+    const text = `Largo usado: ${formatLength(layout.totalLengthCm)}`;
+    ctx.save();
+    ctx.font = `${12 * metrics.dpr}px "IBM Plex Sans", "Segoe UI", sans-serif`;
+    const paddingX = 12 * metrics.dpr;
+    const paddingY = 6 * metrics.dpr;
+    const textWidth = ctx.measureText(text).width;
+    const badgeWidth = textWidth + paddingX * 2;
+    const badgeHeight = 26 * metrics.dpr;
+    const fabricBottom = geometry.offsetY + geometry.totalLength * geometry.scaleY;
+    const availableRight = geometry.offsetX + layout.spec.widthCm * geometry.scaleX;
+    const badgeX = Math.max(geometry.offsetX, availableRight - badgeWidth);
+    const badgeY = fabricBottom + 12 * metrics.dpr;
+    roundRectPath(ctx, badgeX, badgeY, badgeWidth, badgeHeight, 6 * metrics.dpr);
+    ctx.fillStyle = colors.fabricFill;
+    ctx.fill();
+    ctx.strokeStyle = colors.fabricStroke;
+    ctx.lineWidth = Math.max(1, metrics.dpr * 0.85);
+    ctx.stroke();
+    ctx.fillStyle = colors.text;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, badgeX + badgeWidth / 2, badgeY + badgeHeight / 2);
+    ctx.restore();
+  }
+
+  function roundRectPath(ctx, x, y, width, height, radius) {
+    const r = Math.max(0, Math.min(radius, width / 2, height / 2));
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + width - r, y);
+    ctx.quadraticCurveTo(x + width, y, x + width, y + r);
+    ctx.lineTo(x + width, y + height - r);
+    ctx.quadraticCurveTo(x + width, y + height, x + width - r, y + height);
+    ctx.lineTo(x + r, y + height);
+    ctx.quadraticCurveTo(x, y + height, x, y + height - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
   }
 
   function readThemeColors() {
