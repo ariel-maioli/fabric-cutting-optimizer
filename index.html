@@ -251,19 +251,46 @@
         <div class="piece-row__grid">
           <label class="field-group">
             <span>Ref</span>
-            <input type="text" data-field="label" maxlength="40" />
+            <input type="text" data-field="label" maxlength="25" />
           </label>
           <label class="field-group">
             <span>Ancho (cm)</span>
-            <input type="number" step="0.1" min="0.1" inputmode="decimal" data-field="width" />
+            <input
+              type="number"
+              step="1"
+              min="1"
+              inputmode="numeric"
+              pattern="[0-9]*"
+              data-field="width"
+              data-max-digits="3"
+              oninput="this.value = this.value.replace(/\D/g, '').slice(0, this.dataset.maxDigits || 3);"
+            />
           </label>
           <label class="field-group">
             <span>Alto (cm)</span>
-            <input type="number" step="0.1" min="0.1" inputmode="decimal" data-field="height" />
+            <input
+              type="number"
+              step="1"
+              min="1"
+              inputmode="numeric"
+              pattern="[0-9]*"
+              data-field="height"
+              data-max-digits="3"
+              oninput="this.value = this.value.replace(/\D/g, '').slice(0, this.dataset.maxDigits || 3);"
+            />
           </label>
           <label class="field-group">
             <span>Cantidad</span>
-            <input type="number" min="0" step="1" inputmode="numeric" data-field="quantity" />
+            <input
+              type="number"
+              min="0"
+              step="1"
+              inputmode="numeric"
+              pattern="[0-9]*"
+              data-field="quantity"
+              data-max-digits="3"
+              oninput="this.value = this.value.replace(/\D/g, '').slice(0, this.dataset.maxDigits || 3);"
+            />
           </label>
         </div>
       </article>

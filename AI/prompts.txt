@@ -139,3 +139,56 @@ Success criteria:
 - Cleaner and denser layout
 
 If any requirement is unclear, STOP and ask before coding.
+
+**Compact the “Parámetros” panel**
+UI FIX – Compact numeric inputs and enforce hard constraints
+
+Refactor ONLY the Parameters → Tela / Separaciones section.
+
+DO NOT touch algorithm, metrics, preview, or data logic.
+
+1) INPUT CONSTRAINTS (HARD)
+- All 5 inputs:
+  - type="number"
+  - integers ONLY (no decimals)
+  - no stepper controls
+  - block extra digits at input-time (maxlength behavior for number inputs)
+- Limits:
+  - Ancho: max 3 digits
+  - Margen 1: max 2 digits
+  - Margen 2: max 2 digits
+  - Gap H: max 2 digits
+  - Gap V: max 2 digits
+
+2) LABELS (EXACT TEXT)
+- Ancho
+- Margen 1
+- Margen 2
+- Gap H
+- Gap V
+
+3) LAYOUT (MANDATORY)
+- Tela row: [Ancho ⓘ] [Margen 1 ⓘ] [Margen 2 ⓘ]
+- Separaciones row: [Gap H ⓘ] [Gap V ⓘ]
+- Do NOT stack these vertically.
+- No extra inputs per row.
+
+4) COMPACT WIDTHS
+- Use fixed widths (ch/em), not percentages.
+- Visual intent:
+  - Ancho ≈ 4ch
+  - Others ≈ 3ch
+- Inputs must not grow with content.
+
+5) TOOLTIP ICONS
+- ⓘ icon must be exactly ONE SPACE from label text.
+- Vertically aligned with label baseline.
+- Must not increase row height.
+
+6) VISUAL CLEANUP
+- Remove redundant helper text.
+- No subtitles.
+- Preserve existing tooltip content and behavior.
+- Result must be more compact than before.
+
+If any rule conflicts, FOLLOW THIS PROMPT.

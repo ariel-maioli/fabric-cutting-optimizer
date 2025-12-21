@@ -53,7 +53,7 @@
 
   const state = {
     fabric: { widthCm: 180, marginX: 1, marginY: 1 },
-    spacing: { gapX: 0.5, gapY: 0.5 },
+    spacing: { gapX: 1, gapY: 1 },
     pieces: PIECE_DEFAULTS.map(createPiece)
   };
 
@@ -255,18 +255,14 @@
       refreshExportButtonState();
       return;
     }
-    const value = field === 'quantity' ? parseInt(target.value, 10) : parseFloat(target.value);
+    const value = parseInt(target.value, 10);
     if (Number.isNaN(value)) {
       target.setAttribute('aria-invalid', 'true');
       return;
     }
-    if (field === 'quantity') {
-      piece.quantity = Math.max(0, value);
-      target.value = piece.quantity;
-    } else {
-      piece[field] = Math.max(0.1, value);
-      target.value = piece[field];
-    }
+    const minValue = field === 'quantity' ? 0 : 1;
+    piece[field] = Math.max(minValue, value);
+    target.value = piece[field];
     target.removeAttribute('aria-invalid');
     markDirty();
     refreshExportButtonState();
