@@ -29,6 +29,7 @@
   const pieceTemplate = document.getElementById('pieceRowTemplate');
   const pieceList = document.getElementById('pieceList');
   const addPieceBtn = document.getElementById('addPieceBtn');
+  const addPieceBtnFloating = document.getElementById('addPieceBtnFloating');
   const pieceLimitHelper = document.getElementById('pieceLimitHelper');
 
   const metricEls = {
@@ -42,6 +43,7 @@
   const previewCanvas = document.getElementById('previewCanvas');
   const exportBtn = document.getElementById('exportBtn');
   const optimizeBtn = document.getElementById('optimizeBtn');
+  const quickOptimizeBtn = document.getElementById('quickOptimizeBtn');
   const themeToggle = document.getElementById('themeToggle');
   const tooltipTriggers = Array.from(document.querySelectorAll('[data-tooltip]'));
   const TOOLTIP_ID = 'fabric-tooltip';
@@ -109,16 +111,22 @@
   }
 
   function bindPieceEvents() {
-    if (addPieceBtn) {
-      addPieceBtn.addEventListener('click', handleAddPiece);
-    }
+    [addPieceBtn, addPieceBtnFloating].forEach((btn) => {
+      if (btn) {
+        btn.addEventListener('click', handleAddPiece);
+      }
+    });
     pieceList.addEventListener('input', handlePieceInput);
     pieceList.addEventListener('click', handlePieceClick);
   }
 
   function bindOptimizeButton() {
-    if (!optimizeBtn) return;
-    optimizeBtn.addEventListener('click', runOptimization);
+    if (optimizeBtn) {
+      optimizeBtn.addEventListener('click', runOptimization);
+    }
+    if (quickOptimizeBtn) {
+      quickOptimizeBtn.addEventListener('click', runOptimization);
+    }
   }
 
   function bindTooltips() {
@@ -351,9 +359,12 @@
   function updatePieceLimitHelper() {
     if (!pieceLimitHelper) return;
     pieceLimitHelper.textContent = `${state.pieces.length} / ${MAX_PIECE_TYPES} tipos configurados`;
-    if (addPieceBtn) {
-      addPieceBtn.disabled = state.pieces.length >= MAX_PIECE_TYPES;
-    }
+    const reachedLimit = state.pieces.length >= MAX_PIECE_TYPES;
+    [addPieceBtn, addPieceBtnFloating].forEach((btn) => {
+      if (btn) {
+        btn.disabled = reachedLimit;
+      }
+    });
   }
 
   function hasConfiguredCuts() {

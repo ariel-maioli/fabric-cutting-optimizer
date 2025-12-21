@@ -143,7 +143,7 @@
           </div>
 
           <div class="param-section" aria-label="Tipos de corte">
-            <div class="piece-section__header">
+            <div class="piece-section__header piece-section__header--sticky">
               <div>
                 <h3 class="param-title">Tipos de corte</h3>
                 <p class="param-description">Hasta 10 tipos, sin rotaciones.</p>
@@ -152,18 +152,22 @@
             </div>
             <div id="pieceList" class="piece-list" role="list" aria-live="polite"></div>
             <p class="helper-text" id="pieceLimitHelper">0 / 10 tipos configurados</p>
+            <div class="piece-floating-actions" aria-label="Acciones rápidas">
+              <button type="button" class="secondary" id="addPieceBtnFloating">Agregar corte</button>
+              <button type="button" class="ghost" id="quickOptimizeBtn">Optimizar</button>
+            </div>
           </div>
 
           <div class="form-footer">
-            <button type="button" class="primary" id="optimizeBtn">Optimizar</button>
             <div class="status" id="formStatus" aria-live="polite"></div>
           </div>
         </form>
       </section>
 
       <section class="panel metrics-panel" aria-labelledby="metricsTitle">
-        <div class="panel-header">
+        <div class="panel-header metrics-panel__header">
           <h2 id="metricsTitle">Métricas</h2>
+          <button type="button" class="primary metrics-panel__optimize" id="optimizeBtn">Optimizar</button>
         </div>
         <dl class="metrics" id="metricsList">
           <div>
