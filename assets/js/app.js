@@ -58,10 +58,24 @@
 
   const FLOAT_EPS = 1e-6;
   const REF_PLACEHOLDER_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const CUT_COLOR_KEYS = ['piecePrimary', 'pieceSecondary', 'accent', 'fabricStroke'];
+  const CUT_TYPE_PALETTE = [
+    '#1F77B4',
+    '#FF7F0E',
+    '#2CA02C',
+    '#D62728',
+    '#9467BD',
+    '#8C564B',
+    '#E377C2',
+    '#7F7F7F',
+    '#BCBD22',
+    '#17BECF'
+  ];
 
   let lastLayout = null;
   let tooltipEl = null;
   let tooltipActiveTrigger = null;
+  let previewTooltipAnchor = null;
 
   init();
 
@@ -71,6 +85,7 @@
     bindOptimizeButton();
     bindThemeToggle();
     bindExport();
+    bindPreviewHover();
     renderPieceRows();
     syncScalarInputs();
     setStatus(STATUS_MESSAGES.pending);
@@ -291,6 +306,7 @@
     state.pieces.forEach((piece, index) => {
       const clone = pieceTemplate.content.firstElementChild.cloneNode(true);
       clone.dataset.pieceId = piece.id;
+      clone.dataset.cutId = piece.id;
       const title = clone.querySelector('.piece-row__title');
       if (title) title.textContent = piece.label || `Corte ${getRefPlaceholder(index)}`;
       const labelInput = clone.querySelector('input[data-field="label"]');
@@ -409,7 +425,8 @@
           id: `${piece.id}-${i + 1}`,
           width: piece.width,
           height: piece.height,
-          label: piece.label || `${piece.id}`
+          label: piece.label || `${piece.id}`,
+          cutId: piece.id
         });
       }
     });
@@ -450,6 +467,7 @@
       }
       placements.push({
         pieceId: piece.id,
+        cutId: piece.cutId || piece.id,
         label: piece.label,
         width: piece.width,
         height: piece.height,
@@ -681,15 +699,13 @@
       return;
     }
     const colors = readThemeColors();
-    const paddingX = 48 * metrics.dpr;
-    const paddingY = 36 * metrics.dpr;
-    const drawableWidth = Math.max(10, previewCanvas.width - paddingX * 2);
-    const scaleX = drawableWidth / layout.spec.widthCm;
-    const totalLength = Math.max(layout.totalLengthCm, 0.1);
-    const maxHeight = Math.max(10, previewCanvas.height - paddingY * 2);
-    const scaleY = Math.min(scaleX, maxHeight / totalLength);
-    const offsetX = paddingX;
-    const offsetY = paddingY;
+    const geometry = getPreviewGeometry(layout, metrics.dpr);
+    if (!geometry) {
+      drawEmptyState(ctx, metrics);
+      return;
+    }
+    const cutColors = buildCutColorMap(state.pieces, colors);
+    const { offsetX, offsetY, scaleX, scaleY, totalLength } = geometry;
     const fabricWidthPx = layout.spec.widthCm * scaleX;
     const fabricHeightPx = totalLength * scaleY;
 
@@ -708,23 +724,14 @@
     ctx.strokeRect(printableX, printableY, printableWidth, printableHeight);
     ctx.setLineDash([]);
 
-    const precision = 3;
-    const distinctRows = Array.from(new Set(placements.map((placement) => (placement.y || 0).toFixed(precision))))
-      .sort((a, b) => parseFloat(a) - parseFloat(b));
-    const rowColors = new Map();
-    distinctRows.forEach((key, index) => {
-      rowColors.set(key, index % 2 === 0 ? colors.piecePrimary : colors.pieceSecondary);
-    });
-
     placements.forEach((placement) => {
-      const key = (placement.y || 0).toFixed(precision);
-      const fill = rowColors.get(key) || colors.piecePrimary;
+      const fill = cutColors.get(placement.cutId) || colors.piecePrimary;
       const x = offsetX + placement.x * scaleX;
       const y = offsetY + placement.y * scaleY;
       const width = placement.width * scaleX;
       const height = placement.height * scaleY;
       ctx.fillStyle = fill;
-      ctx.globalAlpha = 0.75;
+      ctx.globalAlpha = 0.78;
       ctx.fillRect(x, y, width, height);
       ctx.globalAlpha = 1;
       ctx.strokeStyle = colors.fabricStroke;
@@ -765,6 +772,7 @@
       printableStroke: styles.getPropertyValue('--color-text-muted').trim() || '#6b7280',
       piecePrimary: styles.getPropertyValue('--color-piece').trim() || '#008080',
       pieceSecondary: styles.getPropertyValue('--color-piece-alt').trim() || '#f2841a',
+      accent: styles.getPropertyValue('--color-accent').trim() || '#005cc5',
       text: styles.getPropertyValue('--color-text').trim() || '#111827',
       textMuted: styles.getPropertyValue('--color-text-muted').trim() || '#6b7280'
     };
@@ -859,4 +867,163 @@
     document.body.appendChild(tooltipEl);
     return tooltipEl;
   }
+
+  function bindPreviewHover() {
+    if (!previewCanvas) return;
+    previewCanvas.addEventListener('mousemove', handlePreviewPointerMove);
+    previewCanvas.addEventListener('mouseleave', () => {
+      hideTooltip();
+      highlightCutRow(null);
+    });
+  }
+
+  function handlePreviewPointerMove(event) {
+    if (!lastLayout || !Array.isArray(lastLayout.placements) || !lastLayout.placements.length) {
+      hideTooltip();
+      highlightCutRow(null);
+      return;
+    }
+    const geometry = getPreviewGeometry(lastLayout);
+    if (!geometry) {
+      hideTooltip();
+      highlightCutRow(null);
+      return;
+    }
+    const coords = getFabricCoordinates(event, geometry);
+    if (!coords) {
+      hideTooltip();
+      highlightCutRow(null);
+      return;
+    }
+    const placement = findPlacementAt(lastLayout, coords.fabricX, coords.fabricY);
+    if (!placement) {
+      hideTooltip();
+      highlightCutRow(null);
+      return;
+    }
+    highlightCutRow(placement.cutId);
+    const tooltipText = formatPlacementTooltip(placement);
+    showPreviewTooltip(tooltipText, event.clientX, event.clientY);
+  }
+
+  function getPreviewGeometry(layout, dprOverride) {
+    if (!previewCanvas || !layout) return null;
+    const dpr = dprOverride || window.devicePixelRatio || 1;
+    const paddingX = 48 * dpr;
+    const paddingY = 36 * dpr;
+    const drawableWidth = Math.max(10, previewCanvas.width - paddingX * 2);
+    const scaleX = drawableWidth / layout.spec.widthCm;
+    const totalLength = Math.max(layout.totalLengthCm, 0.1);
+    const maxHeight = Math.max(10, previewCanvas.height - paddingY * 2);
+    const scaleY = Math.min(scaleX, maxHeight / totalLength);
+    return {
+      offsetX: paddingX,
+      offsetY: paddingY,
+      scaleX,
+      scaleY,
+      totalLength
+    };
+  }
+
+  function getFabricCoordinates(event, geometry) {
+    if (!previewCanvas || !geometry) return null;
+    const rect = previewCanvas.getBoundingClientRect();
+    if (!rect.width || !rect.height) return null;
+    const scale = previewCanvas.width / rect.width;
+    const canvasX = (event.clientX - rect.left) * scale;
+    const canvasY = (event.clientY - rect.top) * scale;
+    const fabricX = (canvasX - geometry.offsetX) / geometry.scaleX;
+    const fabricY = (canvasY - geometry.offsetY) / geometry.scaleY;
+    if (!Number.isFinite(fabricX) || !Number.isFinite(fabricY)) {
+      return null;
+    }
+    return { fabricX, fabricY };
+  }
+
+  function findPlacementAt(layout, fabricX, fabricY) {
+    if (!Array.isArray(layout?.placements)) return null;
+    for (let i = layout.placements.length - 1; i >= 0; i -= 1) {
+      const placement = layout.placements[i];
+      if (!placement) continue;
+      const withinX = fabricX >= placement.x && fabricX <= placement.x + placement.width;
+      const withinY = fabricY >= placement.y && fabricY <= placement.y + placement.height;
+      if (withinX && withinY) {
+        return placement;
+      }
+    }
+    return null;
+  }
+
+  function showPreviewTooltip(text, clientX, clientY) {
+    if (!text) {
+      hideTooltip();
+      return;
+    }
+    const anchor = getPreviewTooltipAnchor();
+    anchor.dataset.tooltip = text;
+    anchor.setAttribute('aria-label', text);
+    anchor.style.left = `${clientX}px`;
+    anchor.style.top = `${clientY}px`;
+    showTooltip(anchor);
+  }
+
+  function getPreviewTooltipAnchor() {
+    if (previewTooltipAnchor) return previewTooltipAnchor;
+    previewTooltipAnchor = document.createElement('div');
+    previewTooltipAnchor.style.position = 'fixed';
+    previewTooltipAnchor.style.width = '1px';
+    previewTooltipAnchor.style.height = '1px';
+    previewTooltipAnchor.style.pointerEvents = 'none';
+    previewTooltipAnchor.style.opacity = '0';
+    previewTooltipAnchor.dataset.tooltip = '';
+    document.body.appendChild(previewTooltipAnchor);
+    return previewTooltipAnchor;
+  }
+
+  function formatPlacementTooltip(placement) {
+    const piece = getPieceById(placement.cutId);
+    const label = (piece?.label || placement.label || 'Corte').trim();
+    const quantity = Number.isFinite(piece?.quantity) ? Math.max(1, piece.quantity) : 1;
+    const widthText = formatMeasurement(placement.width);
+    const heightText = formatMeasurement(placement.height);
+    return `${label} · ${widthText} × ${heightText} cm · x${quantity}`;
+  }
+
+  function getPieceById(id) {
+    if (!id) return null;
+    return state.pieces.find((piece) => piece.id === id) || null;
+  }
+
+  function formatMeasurement(value) {
+    if (!Number.isFinite(value)) return '--';
+    const rounded = Math.round(value * 100) / 100;
+    if (Number.isInteger(rounded)) {
+      return `${rounded}`;
+    }
+    return rounded.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
+  }
+
+  function highlightCutRow(cutId) {
+    if (!pieceList) return;
+    const rows = pieceList.querySelectorAll('[data-cut-id]');
+    rows.forEach((row) => {
+      if (row.dataset.cutId === cutId) {
+        row.setAttribute('data-highlighted', 'true');
+      } else {
+        row.removeAttribute('data-highlighted');
+      }
+    });
+  }
+
+  function buildCutColorMap(pieces, colors) {
+    const palette = CUT_TYPE_PALETTE.slice();
+    const map = new Map();
+    if (!pieces?.length || !palette.length) return map;
+    pieces.forEach((piece, index) => {
+      const color = palette[index % palette.length];
+      map.set(piece.id, color);
+    });
+    return map;
+  }
+
 })();
