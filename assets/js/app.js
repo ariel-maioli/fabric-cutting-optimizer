@@ -34,7 +34,8 @@
   const metricEls = {
     length: document.getElementById('metricLength'),
     usage: document.getElementById('metricUsage'),
-    pieces: document.getElementById('metricPieces')
+    pieces: document.getElementById('metricPieces'),
+    waste: document.getElementById('metricWaste')
   };
 
   const statusEl = document.getElementById('formStatus');
@@ -664,6 +665,7 @@
     setMetric(metricEls.length, formatLength(metrics.lengthCm));
     setMetric(metricEls.usage, `${metrics.usagePct.toFixed(1)}%`);
     setMetric(metricEls.pieces, metrics.pieces);
+    setMetric(metricEls.waste, formatWaste(metrics.usagePct));
   }
 
   function setMetric(el, value) {
@@ -680,6 +682,12 @@
       return `${meters.toFixed(2)} m (${value.toFixed(1)} cm)`;
     }
     return `${value.toFixed(1)} cm`;
+  }
+
+  function formatWaste(usagePct) {
+    if (!Number.isFinite(usagePct)) return '--';
+    const waste = Math.max(0, 100 - usagePct);
+    return `${waste.toFixed(1)}%`;
   }
 
   function setStatus(message) {
