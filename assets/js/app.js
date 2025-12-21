@@ -235,6 +235,7 @@
     );
     renderPieceRows();
     markDirty();
+    refreshExportButtonState();
   }
 
   function handlePieceInput(event) {
@@ -286,11 +287,13 @@
       state.pieces[0] = createPiece({ label: 'Corte 1', width: 20, height: 20, quantity: 1 });
       renderPieceRows();
       markDirty();
+      refreshExportButtonState();
       return;
     }
     state.pieces = state.pieces.filter((piece) => piece.id !== id);
     renderPieceRows();
     markDirty();
+    refreshExportButtonState();
   }
 
   function createPiece(data) {
@@ -363,11 +366,10 @@
 
   function hasConfiguredCuts() {
     return state.pieces.some((piece) => {
-      if (!Number.isFinite(piece?.width) || !Number.isFinite(piece?.height)) {
-        return false;
-      }
+      const widthValid = Number.isFinite(piece?.width) && piece.width > 0;
+      const heightValid = Number.isFinite(piece?.height) && piece.height > 0;
       const quantity = Number.isFinite(piece?.quantity) ? piece.quantity : 0;
-      return quantity > 0;
+      return widthValid && heightValid && quantity > 0;
     });
   }
 
@@ -707,13 +709,25 @@
   }
 
 
-  function formatLength(value) {
+  function formatLength(value, options = {}) {
+    const { includeUnits = true } = options;
     if (!Number.isFinite(value) || value <= 0) return '--';
+    if (!includeUnits) {
+      const cmValue = Math.round(value * 10) / 10;
+      const text = Number.isInteger(cmValue) ? `${cmValue}` : cmValue.toFixed(1);
+      return text;
+    }
     if (value >= 100) {
       const meters = value / 100;
       return `${meters.toFixed(2)} m (${value.toFixed(1)} cm)`;
     }
     return `${value.toFixed(1)} cm`;
+  }
+
+  function formatMeters(value) {
+    if (!Number.isFinite(value)) return '--';
+    const meters = Math.max(0, value) / 100;
+    return meters.toFixed(2);
   }
 
   function formatWaste(usagePct) {
@@ -739,8 +753,6 @@
       return;
     }
     const colors = readThemeColors();
-    const showRuler = previewCanvas.dataset.showRuler !== 'false';
-    const showLengthBadge = previewCanvas.dataset.showLengthBadge !== 'false';
     const highlightedCutId = previewCanvas.dataset.highlightCutId || '';
     const geometry = getPreviewGeometry(layout, metrics.dpr);
     if (!geometry) {
@@ -782,12 +794,8 @@
       ctx.lineWidth = 1.2 * metrics.dpr;
       ctx.strokeRect(x, y, width, height);
     });
-    if (showRuler) {
-      drawHorizontalRuler(ctx, layout, geometry, metrics, colors);
-    }
-    if (showLengthBadge) {
-      drawLengthBadge(ctx, layout, geometry, metrics, colors);
-    }
+
+    drawCombinedBadge(ctx, layout, geometry, metrics, colors);
   }
 
   function resizeCanvas(canvas, force) {
@@ -809,87 +817,38 @@
     ctx.fillText('Completa los parámetros para ver la distribución.', 32 * metrics.dpr, rect.height * metrics.dpr * 0.5);
   }
 
-  function drawHorizontalRuler(ctx, layout, geometry, metrics, colors) {
+  function drawCombinedBadge(ctx, layout, geometry, metrics, colors) {
     const widthCm = layout?.spec?.widthCm;
-    if (!Number.isFinite(widthCm) || widthCm <= 0) return;
-    const startX = geometry.offsetX;
-    const endX = startX + widthCm * geometry.scaleX;
-    const baseY = geometry.offsetY - 18 * metrics.dpr;
-    if (baseY < 6 * metrics.dpr) return;
-    ctx.save();
-    ctx.strokeStyle = colors.textMuted;
-    ctx.lineWidth = Math.max(1, metrics.dpr);
-    ctx.beginPath();
-    ctx.moveTo(startX, baseY);
-    ctx.lineTo(endX, baseY);
-    ctx.stroke();
-    const approxPx = 60 * metrics.dpr;
-    let cmStep = approxPx / geometry.scaleX;
-    if (!Number.isFinite(cmStep) || cmStep <= 0) {
-      cmStep = 10;
-    }
-    const normalizedStep = Math.max(5, Math.round(cmStep / 5) * 5);
-    ctx.font = `${9 * metrics.dpr}px "IBM Plex Sans", "Segoe UI", sans-serif`;
-    ctx.textBaseline = 'bottom';
-    let lastTickCm = 0;
-    let tickIndex = 0;
-    const drawTick = (cm, isMajorOverride) => {
-      const x = startX + cm * geometry.scaleX;
-      const isMajor = typeof isMajorOverride === 'boolean' ? isMajorOverride : tickIndex % 2 === 0;
-      const tickHeight = (isMajor ? 10 : 6) * metrics.dpr;
-      ctx.beginPath();
-      ctx.moveTo(x, baseY);
-      ctx.lineTo(x, baseY - tickHeight);
-      ctx.stroke();
-      if (isMajor) {
-        ctx.fillStyle = colors.textMuted;
-        ctx.textAlign = 'center';
-        const labelValue = Math.round(cm * 10) / 10;
-        const labelText = Number.isInteger(labelValue)
-          ? `${labelValue}`
-          : labelValue.toFixed(1).replace(/\.0$/, '');
-        ctx.fillText(labelText, x, baseY - tickHeight - 2 * metrics.dpr);
-      }
-    };
-    for (let cm = 0; cm <= widthCm + FLOAT_EPS; cm += normalizedStep) {
-      drawTick(cm);
-      lastTickCm = cm;
-      tickIndex += 1;
-    }
-    if (widthCm - lastTickCm > FLOAT_EPS) {
-      drawTick(widthCm, true);
-    }
-    ctx.textAlign = 'left';
-    ctx.fillStyle = colors.text;
-    ctx.font = `${11 * metrics.dpr}px "IBM Plex Sans", "Segoe UI", sans-serif`;
-    ctx.fillText(`Ancho ${widthCm.toFixed(1)} cm`, startX, baseY - 14 * metrics.dpr);
-    ctx.restore();
-  }
-
-  function drawLengthBadge(ctx, layout, geometry, metrics, colors) {
-    if (!layout) return;
-    const text = `Largo usado: ${formatLength(layout.totalLengthCm)}`;
+    if (!layout || !Number.isFinite(widthCm) || widthCm <= 0) return;
+    const lengthText = formatLength(layout.totalLengthCm, { includeUnits: false });
+    const widthMeters = formatMeters(widthCm);
+    const lengthMeters = formatMeters(layout.totalLengthCm);
+    const widthLabel = `Ancho: ${Math.round(widthCm)} cm (${widthMeters} mtr)`;
+    const lengthLabel = `Largo: ${lengthText} cm (${lengthMeters} mtr)`;
+    const text = `${widthLabel}   |   ${lengthLabel}`;
     ctx.save();
     ctx.font = `${12 * metrics.dpr}px "IBM Plex Sans", "Segoe UI", sans-serif`;
     const paddingX = 12 * metrics.dpr;
-    const paddingY = 6 * metrics.dpr;
     const textWidth = ctx.measureText(text).width;
     const badgeWidth = textWidth + paddingX * 2;
-    const badgeHeight = 26 * metrics.dpr;
+    const badgeHeight = 28 * metrics.dpr;
     const fabricBottom = geometry.offsetY + geometry.totalLength * geometry.scaleY;
-    const availableRight = geometry.offsetX + layout.spec.widthCm * geometry.scaleX;
-    const badgeX = Math.max(geometry.offsetX, availableRight - badgeWidth);
-    const badgeY = fabricBottom + 12 * metrics.dpr;
+    const canvasHeight = previewCanvas ? previewCanvas.height : fabricBottom + badgeHeight;
+    let badgeX = geometry.offsetX;
+    let badgeY = fabricBottom + 12 * metrics.dpr;
+    if (badgeY + badgeHeight > canvasHeight - 6 * metrics.dpr) {
+      badgeY = canvasHeight - badgeHeight - 6 * metrics.dpr;
+    }
     roundRectPath(ctx, badgeX, badgeY, badgeWidth, badgeHeight, 6 * metrics.dpr);
-    ctx.fillStyle = colors.fabricFill;
+    ctx.fillStyle = colors.badgeFill || colors.fabricFill;
     ctx.fill();
-    ctx.strokeStyle = colors.fabricStroke;
+    ctx.strokeStyle = colors.badgeStroke || colors.fabricStroke;
     ctx.lineWidth = Math.max(1, metrics.dpr * 0.85);
     ctx.stroke();
     ctx.fillStyle = colors.text;
-    ctx.textAlign = 'center';
+    ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.fillText(text, badgeX + badgeWidth / 2, badgeY + badgeHeight / 2);
+    ctx.fillText(text, badgeX + paddingX, badgeY + badgeHeight / 2);
     ctx.restore();
   }
 
@@ -918,7 +877,9 @@
       pieceSecondary: styles.getPropertyValue('--color-piece-alt').trim() || '#f2841a',
       accent: styles.getPropertyValue('--color-accent').trim() || '#005cc5',
       text: styles.getPropertyValue('--color-text').trim() || '#111827',
-      textMuted: styles.getPropertyValue('--color-text-muted').trim() || '#6b7280'
+      textMuted: styles.getPropertyValue('--color-text-muted').trim() || '#6b7280',
+      badgeFill: styles.getPropertyValue('--color-surface').trim() || '#ffffff',
+      badgeStroke: styles.getPropertyValue('--color-panel-border').trim() || '#d5dae4'
     };
   }
 
