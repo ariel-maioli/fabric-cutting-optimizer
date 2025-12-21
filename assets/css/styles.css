@@ -244,6 +244,18 @@ input[type="number"]::-webkit-inner-spin-button {
   gap: var(--space-3);
 }
 
+.piece-section__title {
+  display: flex;
+  align-items: center;
+}
+
+.piece-section__heading {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin: 0;
+}
+
 .piece-section__header--sticky {
   position: sticky;
   top: calc(-1 * var(--space-3));
