@@ -29,7 +29,6 @@
   const pieceTemplate = document.getElementById('pieceRowTemplate');
   const pieceList = document.getElementById('pieceList');
   const addPieceBtn = document.getElementById('addPieceBtn');
-  const addPieceBtnFloating = document.getElementById('addPieceBtnFloating');
   const pieceLimitHelper = document.getElementById('pieceLimitHelper');
 
   const metricEls = {
@@ -111,11 +110,9 @@
   }
 
   function bindPieceEvents() {
-    [addPieceBtn, addPieceBtnFloating].forEach((btn) => {
-      if (btn) {
-        btn.addEventListener('click', handleAddPiece);
-      }
-    });
+    if (addPieceBtn) {
+      addPieceBtn.addEventListener('click', handleAddPiece);
+    }
     pieceList.addEventListener('input', handlePieceInput);
     pieceList.addEventListener('click', handlePieceClick);
   }
@@ -359,12 +356,9 @@
   function updatePieceLimitHelper() {
     if (!pieceLimitHelper) return;
     pieceLimitHelper.textContent = `${state.pieces.length} / ${MAX_PIECE_TYPES} tipos configurados`;
-    const reachedLimit = state.pieces.length >= MAX_PIECE_TYPES;
-    [addPieceBtn, addPieceBtnFloating].forEach((btn) => {
-      if (btn) {
-        btn.disabled = reachedLimit;
-      }
-    });
+    if (addPieceBtn) {
+      addPieceBtn.disabled = state.pieces.length >= MAX_PIECE_TYPES;
+    }
   }
 
   function hasConfiguredCuts() {

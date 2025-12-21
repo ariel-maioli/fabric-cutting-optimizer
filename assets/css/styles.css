@@ -424,14 +424,22 @@ input[type="text"] {
   flex: 1;
 }
 
+.optimize-btn {
+  font-weight: 600;
+}
+
 .metrics-panel__header {
   align-items: center;
   gap: var(--space-2);
 }
 
-.metrics-panel__optimize {
+.metrics-panel__header .optimize-btn {
   min-width: 0;
   flex-shrink: 0;
+}
+
+.piece-floating-actions .optimize-btn {
+  flex: 1;
 }
 
 button.primary,
