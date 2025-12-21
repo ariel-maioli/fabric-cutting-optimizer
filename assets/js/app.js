@@ -58,7 +58,7 @@
   };
 
   const FLOAT_EPS = 1e-6;
-  const REF_PLACEHOLDER_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const ID_PLACEHOLDER_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
   const CUT_COLOR_KEYS = ['piecePrimary', 'pieceSecondary', 'accent', 'fabricStroke'];
   const CUT_TYPE_PALETTE = [
     '#1F77B4',
@@ -227,7 +227,7 @@
     const nextIndex = state.pieces.length;
     state.pieces.push(
       createPiece({
-        label: `Corte ${getRefPlaceholder(nextIndex)}`,
+        label: `Corte ${getIdPlaceholder(nextIndex)}`,
         width: 20,
         height: 20,
         quantity: 1
@@ -322,7 +322,7 @@
       const labelInput = clone.querySelector('input[data-field="label"]');
       if (labelInput) {
         labelInput.value = piece.label;
-        labelInput.placeholder = getRefPlaceholder(index);
+        labelInput.placeholder = getIdPlaceholder(index);
       }
       const widthInput = clone.querySelector('input[data-field="width"]');
       if (widthInput) widthInput.value = piece.width;
@@ -337,13 +337,13 @@
     refreshExportButtonState();
   }
 
-  function getRefPlaceholder(index) {
+  function getIdPlaceholder(index) {
     let n = index + 1;
     let result = '';
     while (n > 0) {
-      const remainder = (n - 1) % REF_PLACEHOLDER_ALPHABET.length;
-      result = REF_PLACEHOLDER_ALPHABET[remainder] + result;
-      n = Math.floor((n - 1) / REF_PLACEHOLDER_ALPHABET.length);
+      const remainder = (n - 1) % ID_PLACEHOLDER_ALPHABET.length;
+      result = ID_PLACEHOLDER_ALPHABET[remainder] + result;
+      n = Math.floor((n - 1) / ID_PLACEHOLDER_ALPHABET.length);
     }
     return result || 'A';
   }

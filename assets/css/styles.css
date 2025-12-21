@@ -366,7 +366,7 @@ input[type="text"] {
   gap: var(--space-2);
 }
 
-.piece-row__ref-field {
+.piece-row__id-field {
   flex: 1;
   min-width: 0;
   flex-direction: row;
@@ -374,7 +374,7 @@ input[type="text"] {
   gap: var(--space-2);
 }
 
-.piece-row__ref-field input[type="text"] {
+.piece-row__id-field input[type="text"] {
   width: 100%;
 }
 
