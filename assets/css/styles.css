@@ -366,14 +366,21 @@ input[type="text"] {
   gap: var(--space-2);
 }
 
-.piece-row__title {
-  font-weight: 600;
-  color: var(--color-text-muted);
+.piece-row__ref-field {
+  flex: 1;
+  min-width: 0;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.piece-row__ref-field input[type="text"] {
+  width: 100%;
 }
 
 .piece-row__grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-3);
 }
 

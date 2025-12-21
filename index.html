@@ -245,14 +245,13 @@
     <template id="pieceRowTemplate">
       <article class="piece-row" data-piece-row data-cut-id="">
         <div class="piece-row__header">
-          <span class="piece-row__title">Corte</span>
+          <label class="field-group piece-row__ref-field">
+            <span>ID:</span>
+            <input type="text" data-field="label" maxlength="25" />
+          </label>
           <button type="button" class="ghost" data-action="remove" aria-label="Eliminar corte">✕</button>
         </div>
         <div class="piece-row__grid">
-          <label class="field-group">
-            <span>Ref</span>
-            <input type="text" data-field="label" maxlength="25" />
-          </label>
           <label class="field-group">
             <span>Ancho (cm)</span>
             <input

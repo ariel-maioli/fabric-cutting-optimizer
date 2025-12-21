@@ -249,8 +249,6 @@
     if (!piece || !field) return;
     if (field === 'label') {
       piece.label = target.value.trim();
-      const title = row.querySelector('.piece-row__title');
-      if (title) title.textContent = piece.label || fallbackPieceTitle(pieceId);
       markDirty();
       refreshExportButtonState();
       return;
@@ -321,8 +319,6 @@
         highlightCutRow(null);
         updatePreviewHighlight(null);
       });
-      const title = clone.querySelector('.piece-row__title');
-      if (title) title.textContent = piece.label || `Corte ${getRefPlaceholder(index)}`;
       const labelInput = clone.querySelector('input[data-field="label"]');
       if (labelInput) {
         labelInput.value = piece.label;
@@ -374,14 +370,6 @@
     const enabled = hasConfiguredCuts();
     exportBtn.disabled = !enabled;
     exportBtn.setAttribute('aria-disabled', enabled ? 'false' : 'true');
-  }
-
-  function fallbackPieceTitle(pieceId) {
-    const index = state.pieces.findIndex((p) => p.id === pieceId);
-    if (index < 0) {
-      return 'Corte';
-    }
-    return `Corte ${getRefPlaceholder(index)}`;
   }
 
   function syncScalarInputs() {
