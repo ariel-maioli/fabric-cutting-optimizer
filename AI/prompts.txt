@@ -3,7 +3,7 @@ Corte B: 18 × 28 (6 unidades)
 Corte C: 5 × 28 (14 unidades)
 Corte D: 9.5 × 4 (92 unidades)
 
-**4. “Etiqueta” → “Ref” + placeholders automáticos**
+**“Etiqueta” → “Ref” + placeholders automáticos**
 Improve semantics of the cut definition panel.
 
 Requirements:
@@ -13,7 +13,7 @@ Requirements:
 - Must remain compatible with existing saved cuts.
 - Do NOT change the underlying data model.
 
-**5. Nueva métrica: Desperdicio (%)**
+**Nueva métrica: Desperdicio (%)**
 Add a waste metric to complement fabric usage.
 
 Requirements:
@@ -24,7 +24,7 @@ Requirements:
 - Match existing metrics visual style.
 - Reuse existing calculations; do NOT duplicate logic.
 
-**6. Tooltips en inputs clave**
+**Tooltips en inputs clave**
 Add accessible explanatory tooltips to key inputs.
 
 Add tooltips ONLY to:
@@ -49,7 +49,7 @@ Tooltip requirements:
   - Never clip text
 - No external libraries allowed.
 
-**2. Colores por tipo de corte + tooltip en preview**
+**Colores por tipo de corte + tooltip en preview**
 Improve preview readability by visually distinguishing each cut type.
 
 Requirements:
@@ -63,7 +63,7 @@ Requirements:
 - Use data-cut-id to link pieces and UI.
 - Do NOT duplicate logic or introduce new state.
 
-**3. Resaltado cruzado UI ↔ Preview**
+**Resaltado cruzado UI ↔ Preview**
 Add cross-highlighting between the cut list and the preview.
 
 Requirements:
@@ -74,19 +74,7 @@ Requirements:
 - Use data-cut-id only (no new global state).
 - No layout recalculation or performance degradation.
 
-**8. Ajuste fino de escala del preview**
-Fine-tune preview scaling while preserving technical accuracy.
-
-Requirements:
-- Horizontal scale must be exact (real fabric width).
-- Vertical scale may compress ONLY if total length exceeds viewport.
-- Display helper texts:
-  - "Escala horizontal exacta"
-  - "Largo comprimido para caber en pantalla"
-- No internal scrollbars.
-- Do NOT distort horizontal proportions.
-
-**7. Refinamiento Exportar PNG**
+**Refinamiento Exportar PNG**
 Refine the PNG export UX without changing the export pipeline.
 
 Requirements:
@@ -94,22 +82,60 @@ Requirements:
   "Exporta la previsualización actual como imagen PNG."
 - Disable the button when no cuts are defined.
 - Exported PNG must include:
-  - Horizontal ruler (if visible)
-  - Length badge (if visible)
+  - Length badge 
+  - Horizontal width badge
 - Do NOT change the current export flow or introduce libraries.
 
-**9. Mejora del algoritmo shelf (orden previo)**
-Improve shelf-based packing efficiency without changing the core algorithm.
+**Compact and simplify Parámetros I**
+Goal:
+Compact and simplify the “Parámetros” panel UI for a dense, technical workflow.
 
-Requirements:
-- Before applying shelf / first-fit:
-  - Sort all cut pieces by HEIGHT descending.
-  - Then expand by quantity.
-- Rotation must remain disabled.
-- Add explanatory comment:
+CRITICAL RULES:
+- UI-only change
+- DO NOT modify algorithm, calculations, metrics, or preview
+- DO NOT rename JS variables or event bindings
+- DO NOT change input names, ids, or data flow
+- DO NOT introduce steps, wizards, or progressive disclosure
 
-  // Ordenar por alto reduce fragmentación
-  // y mejora el aprovechamiento del largo en shelf.
+Design changes to implement:
 
-- Do NOT change public APIs, signatures, or simple-case results.
+1) Remove any step-based or narrative layout.
+   All inputs must be visible at once.
 
+2) Group inputs by function:
+
+   A) Tela
+      - Ancho de tela (cm)
+      - Margen lateral (cm)
+      - Margen sup/inf (cm)
+
+   B) Separaciones
+      - Gap horiz (cm)
+      - Gap vert (cm)
+
+3) Layout rules:
+   - Use compact grid layout (2 columns where possible)
+   - Reduce vertical padding and margins
+   - Labels above inputs (not inline)
+   - Uniform input height
+
+4) Text rules:
+   - Keep labels short and technical
+   - Explanatory text must go ONLY in existing tooltips
+   - Do not add helper paragraphs that increase height
+
+5) Visual rules:
+   - No nested cards unless strictly necessary
+   - Subtle section headers only
+   - No new colors or visual emphasis
+
+6) Accessibility:
+   - Labels must remain associated with inputs
+   - Tooltips remain keyboard accessible
+
+Success criteria:
+- More inputs visible without scrolling
+- No functional behavior changes
+- Cleaner and denser layout
+
+If any requirement is unclear, STOP and ask before coding.
