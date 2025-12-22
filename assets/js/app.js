@@ -216,15 +216,137 @@
         setStatus('Genera una distribución antes de exportar.', { level: 'info' });
         return;
       }
-      renderPreview(lastLayout, true);
-      const dataUrl = previewCanvas.toDataURL('image/png');
-      const link = document.createElement('a');
-      link.href = dataUrl;
-      link.download = 'corte-tela.png';
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
+      // --- NUEVO: Exportar con leyenda ---
+      exportWithLegend(lastLayout);
     });
+  }
+
+  function exportWithLegend(layout) {
+    // 1. Obtener el canvas y contexto
+    const canvas = previewCanvas;
+    const dpr = window.devicePixelRatio || 1;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // 2. Renderizar el layout en un canvas temporal (para no afectar el preview)
+    const tempCanvas = document.createElement('canvas');
+    const tempCtx = tempCanvas.getContext('2d');
+    tempCanvas.width = canvas.width;
+    tempCanvas.height = canvas.height;
+    tempCtx.drawImage(canvas, 0, 0);
+
+    // 3. Preparar datos de cortes únicos (por ID)
+    const pieces = (state.pieces || []).map((p, idx) => ({
+      ...p,
+      _order: idx
+    }));
+    const cutColors = buildCutColorMap(state.pieces, readThemeColors());
+
+    // 4. Definir dimensiones de la tabla
+    const rowHeight = 36 * dpr;
+    const colorBox = 28 * dpr;
+    const fontSize = 16 * dpr;
+    const padding = 12 * dpr;
+    const colWidths = [colorBox + 3 * padding, 90 * dpr, 180 * dpr, 120 * dpr];
+    const tableWidth = colWidths.reduce((a, b) => a + b, 0);
+    const tableRows = pieces.length + 1; // +1 para encabezado
+    const tableHeight = tableRows * rowHeight + padding;
+
+    // 5. Crear un canvas final más alto
+    const finalCanvas = document.createElement('canvas');
+    finalCanvas.width = tempCanvas.width;
+    finalCanvas.height = tempCanvas.height + tableHeight;
+    const finalCtx = finalCanvas.getContext('2d');
+
+    // 6. Pegar la imagen del layout
+    finalCtx.drawImage(tempCanvas, 0, 0);
+
+    // 7. Dibujar fondo blanco para la tabla
+    finalCtx.save();
+    finalCtx.fillStyle = '#fff';
+    finalCtx.fillRect(0, tempCanvas.height, finalCanvas.width, tableHeight);
+    finalCtx.restore();
+
+    // 8. Dibujar tabla
+    const startY = tempCanvas.height + padding;
+    let y = startY;
+    const startX = (finalCanvas.width - tableWidth) / 2;
+    finalCtx.font = `bold ${fontSize}px 'Segoe UI', 'Arial', sans-serif`;
+    finalCtx.textBaseline = 'middle';
+    finalCtx.textAlign = 'left';
+    finalCtx.fillStyle = '#222';
+
+    // Encabezados
+    const headers = ['Color', 'ID', 'Medidas (cm)', 'Cantidad'];
+    let x = startX;
+    finalCtx.font = `bold ${fontSize}px 'Segoe UI', 'Arial', sans-serif`;
+    finalCtx.textAlign = 'center';
+    headers.forEach((h, i) => {
+      const colCenter = x + colWidths[i] / 2;
+      finalCtx.fillText(i === 1 ? 'ID' : h, colCenter, y + rowHeight / 2);
+      x += colWidths[i];
+    });
+    y += rowHeight;
+
+    // Filas de cortes
+    pieces.forEach((piece, idx) => {
+      x = startX;
+      // Color
+      finalCtx.save();
+      finalCtx.strokeStyle = '#111';
+      finalCtx.lineWidth = 2 * dpr;
+      finalCtx.fillStyle = cutColors.get(piece.id) || '#ccc';
+      finalCtx.beginPath();
+      finalCtx.rect(x + (colWidths[0] - colorBox) / 2, y + (rowHeight - colorBox) / 2, colorBox, colorBox);
+      finalCtx.fill();
+      finalCtx.stroke();
+      finalCtx.restore();
+      x += colWidths[0];
+      // ID
+      finalCtx.fillStyle = '#222';
+      finalCtx.font = `bold ${fontSize}px 'Segoe UI', 'Arial', sans-serif`;
+      finalCtx.textAlign = 'center';
+      finalCtx.fillText((piece.label || '').trim() || getIdPlaceholder(idx), x + colWidths[1] / 2, y + rowHeight / 2);
+      x += colWidths[1];
+      // Medidas
+      finalCtx.font = `${fontSize}px 'Segoe UI', 'Arial', sans-serif`;
+      finalCtx.textAlign = 'center';
+      finalCtx.fillText(`${piece.width} × ${piece.height}`, x + colWidths[2] / 2, y + rowHeight / 2);
+      x += colWidths[2];
+      // Cantidad
+      finalCtx.fillText(`${piece.quantity}`, x + colWidths[3] / 2, y + rowHeight / 2);
+      // Separador sutil
+      finalCtx.save();
+      finalCtx.strokeStyle = '#e0e0e0';
+      finalCtx.lineWidth = 1 * dpr;
+      finalCtx.beginPath();
+      finalCtx.moveTo(startX, y + rowHeight);
+      finalCtx.lineTo(startX + tableWidth, y + rowHeight);
+      finalCtx.stroke();
+      finalCtx.restore();
+      y += rowHeight;
+    });
+
+    // Pie de tabla: ancho y largo de tela debajo de la tabla
+    const pieFontSize = Math.round(fontSize * 0.95);
+    finalCtx.font = `bold ${pieFontSize}px 'Segoe UI', 'Arial', sans-serif`;
+    finalCtx.textAlign = 'center';
+    finalCtx.fillStyle = '#222';
+    const ancho = layout?.spec?.widthCm;
+    const largo = layout?.totalLengthCm;
+    const anchoText = `Ancho de tela: ${ancho} cm`;
+    const largoText = `Largo de tela: ${largo} cm`;
+    const pieText = `${anchoText}   |   ${largoText}`;
+    // finalCtx.fillText(pieText, finalCanvas.width / 2, y + rowHeight * 0.8);
+
+    // 9. Exportar
+    const dataUrl = finalCanvas.toDataURL('image/png');
+    const link = document.createElement('a');
+    link.href = dataUrl;
+    link.download = 'corte-tela.png';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
   }
 
   function handleScalarChange(key) {
