@@ -90,11 +90,66 @@ textarea {
 
 .app-header {
   flex: 0 0 auto;
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
-  padding: var(--space-4) var(--space-5);
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-5);
   transition: background var(--transition-fast), color var(--transition-fast), border var(--transition-fast);
+}
+
+.branding {
+  grid-column: 1;
+}
+
+.app-header__actions {
+  grid-column: 3;
+  align-self: center;
+  justify-self: end;
+}
+
+.theme-switch {
+  border: 1px solid var(--color-panel-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0.35rem 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--transition-fast), border var(--transition-fast), color var(--transition-fast);
+}
+
+.theme-switch__icon {
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  background: var(--color-surface-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  color: var(--color-text);
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.theme-switch__label {
+  font-size: 0.9rem;
+}
+
+.theme-switch:hover {
+  border-color: var(--color-accent);
+}
+
+.theme-switch[aria-checked="true"] {
+  background: var(--color-accent-soft);
+  color: var(--color-text);
+}
+
+.theme-switch[aria-checked="true"] .theme-switch__icon {
+  background: var(--color-accent);
+  color: var(--color-base);
 }
 
 .theme-switch:focus-visible,
@@ -104,13 +159,43 @@ input:focus-visible {
   outline-offset: 2px;
 }
 
+
+.quick-config {
+  grid-column: 2;
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  padding-top: var(--space-1);
+  padding-bottom: 0;
+}
+
+.quick-config__grid {
+  display: grid;
+  grid-template-columns: repeat(2, 320px);
+  gap: var(--space-3);
+  justify-content: center;
+}
+
 .app-shell {
   flex: 1 1 auto;
   min-height: 0;
   display: grid;
   grid-template-columns: 360px 240px 1fr;
   gap: var(--space-5);
-  padding: var(--space-4) var(--space-5);
+  padding: var(--space-2) var(--space-5) var(--space-4);
+  grid-template-areas: "form metrics preview";
+}
+
+.form-panel {
+  grid-area: form;
+}
+
+.metrics-panel {
+  grid-area: metrics;
+}
+
+.preview-panel {
+  grid-area: preview;
 }
 
 .panel {
@@ -144,8 +229,8 @@ input:focus-visible {
   gap: var(--space-3);
   flex: 1 1 auto;
   min-height: 0;
-  overflow-y: auto;
-  padding-right: var(--space-1);
+  overflow: hidden;
+  padding-right: 0;
 }
 
 .param-section {
@@ -160,6 +245,16 @@ input:focus-visible {
 .param-section--compact {
   gap: var(--space-2);
   padding: var(--space-2) var(--space-3);
+}
+
+.param-section--scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: var(--space-1);
+  padding-bottom: calc(var(--space-5) + 3rem);
+  margin-bottom: 0;
 }
 
 .param-row {
@@ -381,6 +476,7 @@ input[type="text"] {
   flex-direction: column;
   gap: var(--space-3);
   padding-bottom: var(--space-5);
+  scroll-padding-bottom: var(--space-5);
 }
 
 .piece-row {

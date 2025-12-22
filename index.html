@@ -29,18 +29,8 @@
         <h1>PeeP Rosario</h1>
         <p>Optimizador de corte para rollos de tela</p>
       </div>
-      <button type="button" class="theme-switch" aria-label="Cambiar tema" role="switch" aria-checked="false" id="themeToggle">
-        <span class="theme-switch__icon" aria-hidden="true">◑</span>
-        <span class="theme-switch__label">Claro</span>
-      </button>
-    </header>
-
-    <main class="app-shell">
-      <section class="panel form-panel" aria-labelledby="formTitle">
-        <div class="panel-header">
-          <h2 id="formTitle">Parámetros</h2>
-        </div>
-        <form id="configForm" novalidate>
+      <section class="quick-config" aria-label="Configuración rápida">
+        <div class="quick-config__grid">
           <div class="param-section param-section--compact" aria-label="Especificación de tela">
             <div class="param-section__title-row">
               <h3 class="param-title">Tela</h3>
@@ -99,12 +89,11 @@
               </div>
             </div>
           </div>
-
           <div class="param-section param-section--compact" aria-label="GAPs">
             <div class="param-section__title-row">
               <h3 class="param-title">GAPs</h3>
             </div>
-            <div class="param-row param-row--double param-row--inline" role="group" aria-label="GAPs">
+            <div class="param-row param-row--double" role="group" aria-label="GAPs">
               <div class="numeric-field">
                 <label for="gapX">Gap H <button type="button" class="info-trigger" aria-label="Separación horizontal entre piezas. Valor en centímetros (cm)." data-tooltip="Separación horizontal entre piezas. Valor en centímetros (cm).">ⓘ</button></label>
                 <input
@@ -141,8 +130,23 @@
               </div>
             </div>
           </div>
+        </div>
+      </section>
+      <div class="app-header__actions">
+        <button type="button" class="theme-switch" aria-label="Cambiar tema" role="switch" aria-checked="false" id="themeToggle">
+          <span class="theme-switch__icon" aria-hidden="true">◑</span>
+          <span class="theme-switch__label">Claro</span>
+        </button>
+      </div>
+    </header>
 
-            <div class="param-section" aria-label="Tipos de corte">
+    <main class="app-shell">
+      <section class="panel form-panel" aria-labelledby="formTitle">
+        <div class="panel-header">
+          <h2 id="formTitle">Parámetros</h2>
+        </div>
+        <form id="configForm" novalidate>
+            <div class="param-section param-section--scroll" aria-label="Tipos de corte">
               <div class="piece-section__header piece-section__header--sticky">
                 <div class="piece-section__meta">
                   <div class="piece-section__title">
