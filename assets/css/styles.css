@@ -252,9 +252,11 @@ input:focus-visible {
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
-  padding-right: var(--space-1);
+  padding-left: var(--space-1);
+  padding-right: calc(var(--space-1) + 18px);
   padding-bottom: calc(var(--space-5) + 3rem);
   margin-bottom: 0;
+  scrollbar-gutter: stable both-edges;
 }
 
 .param-row {
@@ -477,6 +479,8 @@ input[type="text"] {
   gap: var(--space-3);
   padding-bottom: var(--space-5);
   scroll-padding-bottom: var(--space-5);
+  width: 100%;
+  margin: 0;
 }
 
 .piece-row {
