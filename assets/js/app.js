@@ -1,9 +1,6 @@
 (function () {
   const MAX_PIECE_TYPES = 10;
-  const PIECE_DEFAULTS = [
-    { label: 'Corte A', width: 25, height: 35, quantity: 4 },
-    { label: 'Corte B', width: 18, height: 28, quantity: 6 }
-  ];
+  const PIECE_DEFAULTS = [{ label: 'Corte A', width: 24, height: 35, quantity: 7 }];
 
   const scalarInputs = {
     fabricWidth: document.getElementById('fabricWidth'),
@@ -285,13 +282,6 @@
 
   function removePiece(id) {
     if (!id) return;
-    if (state.pieces.length === 1) {
-      state.pieces[0] = createPiece({ label: 'Corte 1', width: 20, height: 20, quantity: 1 });
-      renderPieceRows();
-      markDirty();
-      refreshExportButtonState();
-      return;
-    }
     state.pieces = state.pieces.filter((piece) => piece.id !== id);
     renderPieceRows();
     markDirty();
