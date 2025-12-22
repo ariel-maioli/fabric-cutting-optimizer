@@ -545,7 +545,7 @@ input[type="text"] {
 
 .info-tooltip {
   position: fixed;
-  z-index: 999;
+  z-index: 1600;
   max-width: 260px;
   background: var(--color-surface);
   color: var(--color-text);
@@ -637,8 +637,17 @@ input[type="text"] {
   flex: 1;
 }
 
+/* Style for disabled optimize button */
 .optimize-btn {
   font-weight: 600;
+}
+.optimize-btn:disabled,
+.primary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
+  background: var(--color-panel-border);
+  color: var(--color-text-muted);
 }
 
 .metrics-panel__header {

@@ -29,6 +29,7 @@
   const pieceLimitHelper = document.getElementById('pieceLimitHelper');
 
   const metricEls = {
+    fabricWidth: document.getElementById('metricFabricWidth'),
     length: document.getElementById('metricLength'),
     usage: document.getElementById('metricUsage'),
     pieces: document.getElementById('metricPieces'),
@@ -39,6 +40,7 @@
   const previewCanvas = document.getElementById('previewCanvas');
   const previewStatusEl = document.querySelector('.preview-status');
   const exportBtn = document.getElementById('exportBtn');
+  let needsReoptimize = true;
   const optimizeBtn = document.getElementById('optimizeBtn');
   const quickOptimizeBtn = document.getElementById('quickOptimizeBtn');
   const themeToggle = document.getElementById('themeToggle');
@@ -93,6 +95,7 @@
     bindPreviewHover();
     renderPieceRows();
     syncScalarInputs();
+    updateFabricWidthMetric();
     setStatus(STATUS_MESSAGES.pending, { level: 'info' });
     setPreviewStatus('Aún sin resultados. Haz clic en "Optimizar".', { level: 'info' });
     window.addEventListener('resize', () => {
@@ -103,6 +106,7 @@
     window.addEventListener('scroll', refreshTooltipPosition, true);
     bindTooltips();
     refreshExportButtonState();
+    refreshOptimizeButtonState();
   }
 
   function bindSettingsModal() {
@@ -167,10 +171,16 @@
 
   function bindOptimizeButton() {
     if (optimizeBtn) {
-      optimizeBtn.addEventListener('click', runOptimization);
+      optimizeBtn.addEventListener('click', () => {
+        if (optimizeBtn.disabled) return;
+        runOptimization();
+      });
     }
     if (quickOptimizeBtn) {
-      quickOptimizeBtn.addEventListener('click', runOptimization);
+      quickOptimizeBtn.addEventListener('click', () => {
+        if (quickOptimizeBtn.disabled) return;
+        runOptimization();
+      });
     }
   }
 
@@ -232,6 +242,9 @@
     input.value = sanitized;
     setScalarValue(meta.path, sanitized);
     setHelper(key, '');
+    if (key === 'fabricWidth') {
+      updateFabricWidthMetric();
+    }
     markDirty();
   }
 
@@ -272,6 +285,8 @@
   }
 
   function markDirty(message) {
+    needsReoptimize = true;
+    refreshOptimizeButtonState();
     setStatus(message || STATUS_MESSAGES.pending, { level: 'info' });
     setPreviewStatus('Aún sin resultados. Haz clic en "Optimizar".', { level: 'info' });
   }
@@ -419,6 +434,18 @@
     exportBtn.setAttribute('aria-disabled', enabled ? 'false' : 'true');
   }
 
+  function refreshOptimizeButtonState() {
+    const enabled = !!needsReoptimize;
+    if (quickOptimizeBtn) {
+      quickOptimizeBtn.disabled = !enabled;
+      quickOptimizeBtn.setAttribute('aria-disabled', enabled ? 'false' : 'true');
+    }
+    if (optimizeBtn) {
+      optimizeBtn.disabled = !enabled;
+      optimizeBtn.setAttribute('aria-disabled', enabled ? 'false' : 'true');
+    }
+  }
+
   function syncScalarInputs() {
     Object.entries(scalarInputs).forEach(([key, input]) => {
       if (!input) return;
@@ -426,6 +453,7 @@
       if (!path) return;
       input.value = getNestedValue(path);
     });
+    updateFabricWidthMetric();
   }
 
   function getNestedValue(path) {
@@ -439,6 +467,8 @@
     if (snapshot.layout) {
       setStatus(snapshot.status || STATUS_MESSAGES.success, { level: 'success' });
       setPreviewStatus('Última optimización exitosa.', { level: 'success' });
+      needsReoptimize = false;
+      refreshOptimizeButtonState();
     } else if (snapshot.status) {
       setStatus(snapshot.status, { level: 'error' });
       setPreviewStatus(snapshot.status, { level: 'error' });
@@ -725,15 +755,29 @@
 
   function updateMetrics(metrics) {
     if (!metrics) {
-      Object.values(metricEls).forEach((el) => {
-        if (el) el.textContent = '--';
+      ['length', 'usage', 'pieces', 'waste'].forEach((key) => {
+        setMetric(metricEls[key], '--');
       });
+      updateFabricWidthMetric();
       return;
     }
+    updateFabricWidthMetric();
     setMetric(metricEls.length, formatLength(metrics.lengthCm));
     setMetric(metricEls.usage, `${metrics.usagePct.toFixed(1)}%`);
     setMetric(metricEls.pieces, metrics.pieces);
     setMetric(metricEls.waste, formatWaste(metrics.usagePct));
+  }
+
+  function updateFabricWidthMetric() {
+    const widthValue = Number(state.fabric?.widthCm);
+    if (!metricEls.fabricWidth) return;
+    if (!Number.isFinite(widthValue) || widthValue <= 0) {
+      setMetric(metricEls.fabricWidth, '--');
+      return;
+    }
+    const rounded = Math.round(widthValue * 10) / 10;
+    const text = Number.isInteger(rounded) ? `${rounded} cm` : `${rounded.toFixed(1)} cm`;
+    setMetric(metricEls.fabricWidth, text);
   }
 
   function setMetric(el, value) {

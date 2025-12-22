@@ -67,7 +67,7 @@
                 </div>
                 <div class="param-row param-row--triple" role="group" aria-label="Tela">
                   <div class="numeric-field">
-                    <label for="fabricWidth">Ancho <button type="button" class="info-trigger" aria-label="Ancho fijo del rollo de tela. Valor en centímetros (cm)." data-tooltip="Ancho fijo del rollo de tela. Valor en centímetros (cm).">ⓘ</button></label>
+                    <label for="fabricWidth">Ancho <button type="button" class="info-trigger" aria-label="Ancho fijo del rollo de tela. Valor en centímetros (cm)." data-tooltip="Ancho fijo del rollo de tela. Valor en centímetros (cm)." data-tooltip-id="fabricTooltip">ⓘ</button></label>
                     <input
                       id="fabricWidth"
                       name="fabricWidth"
@@ -84,7 +84,7 @@
                     />
                   </div>
                   <div class="numeric-field">
-                    <label for="marginX">Margen 1 <button type="button" class="info-trigger" aria-label="Margen aplicado a ambos lados de la tela. Valor en centímetros (cm)." data-tooltip="Margen aplicado a ambos lados de la tela. Valor en centímetros (cm).">ⓘ</button></label>
+                    <label for="marginX">Margen 1 <button type="button" class="info-trigger" aria-label="Margen aplicado a ambos lados de la tela. Valor en centímetros (cm)." data-tooltip="Margen aplicado a ambos lados de la tela. Valor en centímetros (cm)." data-tooltip-id="fabricTooltip">ⓘ</button></label>
                     <input
                       id="marginX"
                       name="marginX"
@@ -101,7 +101,7 @@
                     />
                   </div>
                   <div class="numeric-field">
-                    <label for="marginY">Margen 2 <button type="button" class="info-trigger" aria-label="Margen aplicado al inicio y fin del largo de la tela. Valor en centímetros (cm)." data-tooltip="Margen aplicado al inicio y fin del largo de la tela. Valor en centímetros (cm).">ⓘ</button></label>
+                    <label for="marginY">Margen 2 <button type="button" class="info-trigger" aria-label="Margen aplicado al inicio y fin del largo de la tela. Valor en centímetros (cm)." data-tooltip="Margen aplicado al inicio y fin del largo de la tela. Valor en centímetros (cm)." data-tooltip-id="fabricTooltip">ⓘ</button></label>
                     <input
                       id="marginY"
                       name="marginY"
@@ -125,7 +125,7 @@
                 </div>
                 <div class="param-row param-row--double" role="group" aria-label="GAPs">
                   <div class="numeric-field">
-                    <label for="gapX">Gap H <button type="button" class="info-trigger" aria-label="Separación horizontal entre piezas. Valor en centímetros (cm)." data-tooltip="Separación horizontal entre piezas. Valor en centímetros (cm).">ⓘ</button></label>
+                    <label for="gapX">Gap H <button type="button" class="info-trigger" aria-label="Separación horizontal entre piezas. Valor en centímetros (cm)." data-tooltip="Separación horizontal entre piezas. Valor en centímetros (cm)." data-tooltip-id="fabricTooltip">ⓘ</button></label>
                     <input
                       id="gapX"
                       name="gapX"
@@ -142,7 +142,7 @@
                     />
                   </div>
                   <div class="numeric-field">
-                    <label for="gapY">Gap V <button type="button" class="info-trigger" aria-label="Separación vertical entre filas. Valor en centímetros (cm)." data-tooltip="Separación vertical entre filas. Valor en centímetros (cm).">ⓘ</button></label>
+                    <label for="gapY">Gap V <button type="button" class="info-trigger" aria-label="Separación vertical entre filas. Valor en centímetros (cm)." data-tooltip="Separación vertical entre filas. Valor en centímetros (cm)." data-tooltip-id="fabricTooltip">ⓘ</button></label>
                     <input
                       id="gapY"
                       name="gapY"
@@ -185,8 +185,8 @@
                       <button
                         type="button"
                         class="info-trigger"
-                        aria-label="Hasta 10 tipos de corte, sin rotaciones."
-                        data-tooltip="Hasta 10 tipos de corte, sin rotaciones."
+                        aria-label="El campo ID es para identificar cada corte y es editable. Todas las medidas son en cm."
+                        data-tooltip="El campo ID es para identificar cada corte y es editable. Todas las medidas son en cm."
                       >ⓘ</button>
                     </h3>
                   </div>
@@ -211,6 +211,18 @@
           <h2 id="metricsTitle">Métricas</h2>
         </div>
         <dl class="metrics" id="metricsList">
+          <div>
+            <dt>
+              Ancho de tela
+              <button
+                type="button"
+                class="info-trigger"
+                aria-label="Ancho fijo del rollo configurado."
+                data-tooltip="Ancho fijo del rollo configurado."
+              >ⓘ</button>
+            </dt>
+            <dd id="metricFabricWidth">--</dd>
+          </div>
           <div>
             <dt>
               Largo total
@@ -291,7 +303,7 @@
         <div class="piece-row__header">
           <label class="field-group piece-row__id-field">
             <span>ID:</span>
-            <input type="text" data-field="label" maxlength="25" />
+            <input type="text" name="pieceLabel" data-field="label" maxlength="25" />
           </label>
           <button type="button" class="ghost" data-action="remove" aria-label="Eliminar corte">✕</button>
         </div>
@@ -304,6 +316,7 @@
               min="1"
               inputmode="numeric"
               pattern="[0-9]*"
+              name="pieceWidth"
               data-field="width"
               data-max-digits="3"
               oninput="this.value = this.value.replace(/\D/g, '').slice(0, this.dataset.maxDigits || 3);"
@@ -317,6 +330,7 @@
               min="1"
               inputmode="numeric"
               pattern="[0-9]*"
+              name="pieceHeight"
               data-field="height"
               data-max-digits="3"
               oninput="this.value = this.value.replace(/\D/g, '').slice(0, this.dataset.maxDigits || 3);"
@@ -330,6 +344,7 @@
               step="1"
               inputmode="numeric"
               pattern="[0-9]*"
+              name="pieceQuantity"
               data-field="quantity"
               data-max-digits="3"
               oninput="this.value = this.value.replace(/\D/g, '').slice(0, this.dataset.maxDigits || 3);"
