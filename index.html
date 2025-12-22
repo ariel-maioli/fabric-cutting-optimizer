@@ -29,116 +29,146 @@
         <h1>PeeP Rosario</h1>
         <p>Optimizador de corte para rollos de tela</p>
       </div>
-      <section class="quick-config" aria-label="Configuración rápida">
-        <div class="quick-config__grid">
-          <div class="param-section param-section--compact" aria-label="Especificación de tela">
-            <div class="param-section__title-row">
-              <h3 class="param-title">Tela</h3>
-            </div>
-            <div class="param-row param-row--triple" role="group" aria-label="Tela">
-              <div class="numeric-field">
-                <label for="fabricWidth">Ancho <button type="button" class="info-trigger" aria-label="Ancho fijo del rollo de tela. Valor en centímetros (cm)." data-tooltip="Ancho fijo del rollo de tela. Valor en centímetros (cm).">ⓘ</button></label>
-                <input
-                  id="fabricWidth"
-                  name="fabricWidth"
-                  class="numeric-input numeric-input--ancho"
-                  type="number"
-                  inputmode="numeric"
-                  pattern="[0-9]*"
-                  min="1"
-                  max="999"
-                  step="1"
-                  data-max-digits="3"
-                  value="180"
-                  oninput="this.value = this.value.replace(/\D/g, '').slice(0, this.dataset.maxDigits || 3);"
-                />
-              </div>
-              <div class="numeric-field">
-                <label for="marginX">Margen 1 <button type="button" class="info-trigger" aria-label="Margen aplicado a ambos lados de la tela. Valor en centímetros (cm)." data-tooltip="Margen aplicado a ambos lados de la tela. Valor en centímetros (cm).">ⓘ</button></label>
-                <input
-                  id="marginX"
-                  name="marginX"
-                  class="numeric-input numeric-input--short"
-                  type="number"
-                  inputmode="numeric"
-                  pattern="[0-9]*"
-                  min="0"
-                  max="99"
-                  step="1"
-                  data-max-digits="2"
-                  value="1"
-                  oninput="this.value = this.value.replace(/\D/g, '').slice(0, this.dataset.maxDigits || 2);"
-                />
-              </div>
-              <div class="numeric-field">
-                <label for="marginY">Margen 2 <button type="button" class="info-trigger" aria-label="Margen aplicado al inicio y fin del largo de la tela. Valor en centímetros (cm)." data-tooltip="Margen aplicado al inicio y fin del largo de la tela. Valor en centímetros (cm).">ⓘ</button></label>
-                <input
-                  id="marginY"
-                  name="marginY"
-                  class="numeric-input numeric-input--short"
-                  type="number"
-                  inputmode="numeric"
-                  pattern="[0-9]*"
-                  min="0"
-                  max="99"
-                  step="1"
-                  data-max-digits="2"
-                  value="1"
-                  oninput="this.value = this.value.replace(/\D/g, '').slice(0, this.dataset.maxDigits || 2);"
-                />
-              </div>
-            </div>
-          </div>
-          <div class="param-section param-section--compact" aria-label="GAPs">
-            <div class="param-section__title-row">
-              <h3 class="param-title">GAPs</h3>
-            </div>
-            <div class="param-row param-row--double" role="group" aria-label="GAPs">
-              <div class="numeric-field">
-                <label for="gapX">Gap H <button type="button" class="info-trigger" aria-label="Separación horizontal entre piezas. Valor en centímetros (cm)." data-tooltip="Separación horizontal entre piezas. Valor en centímetros (cm).">ⓘ</button></label>
-                <input
-                  id="gapX"
-                  name="gapX"
-                  class="numeric-input numeric-input--short"
-                  type="number"
-                  inputmode="numeric"
-                  pattern="[0-9]*"
-                  min="0"
-                  max="99"
-                  step="1"
-                  data-max-digits="2"
-                  value="1"
-                  oninput="this.value = this.value.replace(/\D/g, '').slice(0, this.dataset.maxDigits || 2);"
-                />
-              </div>
-              <div class="numeric-field">
-                <label for="gapY">Gap V <button type="button" class="info-trigger" aria-label="Separación vertical entre filas. Valor en centímetros (cm)." data-tooltip="Separación vertical entre filas. Valor en centímetros (cm).">ⓘ</button></label>
-                <input
-                  id="gapY"
-                  name="gapY"
-                  class="numeric-input numeric-input--short"
-                  type="number"
-                  inputmode="numeric"
-                  pattern="[0-9]*"
-                  min="0"
-                  max="99"
-                  step="1"
-                  data-max-digits="2"
-                  value="1"
-                  oninput="this.value = this.value.replace(/\D/g, '').slice(0, this.dataset.maxDigits || 2);"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
       <div class="app-header__actions">
+        <button
+          type="button"
+          class="settings-trigger"
+          id="fabricSettingsTrigger"
+          aria-haspopup="dialog"
+          aria-controls="fabricSettingsModal"
+          aria-expanded="false"
+        >
+          <span class="settings-trigger__icon" aria-hidden="true">⚙</span>
+          <span class="settings-trigger__label">Tela / GAPs</span>
+        </button>
         <button type="button" class="theme-switch" aria-label="Cambiar tema" role="switch" aria-checked="false" id="themeToggle">
           <span class="theme-switch__icon" aria-hidden="true">◑</span>
           <span class="theme-switch__label">Claro</span>
         </button>
       </div>
     </header>
+
+    <div class="modal" id="fabricSettingsModal" hidden>
+      <div class="modal__overlay" data-modal-dismiss="true" aria-hidden="true"></div>
+      <div class="modal__dialog" role="dialog" aria-modal="true" aria-labelledby="fabricSettingsTitle">
+        <div class="modal__header">
+          <div>
+            <p class="modal__eyebrow">Preferencias</p>
+            <h2 class="modal__title" id="fabricSettingsTitle">Configuración de tela y GAPs</h2>
+          </div>
+          <button type="button" class="ghost modal__close" aria-label="Cerrar configuración" data-modal-dismiss="true">✕</button>
+        </div>
+        <div class="modal__body">
+          <section class="quick-config" aria-label="Configuración rápida">
+            <div class="quick-config__grid">
+              <div class="param-section param-section--compact" aria-label="Especificación de tela">
+                <div class="param-section__title-row">
+                  <h3 class="param-title">Tela</h3>
+                </div>
+                <div class="param-row param-row--triple" role="group" aria-label="Tela">
+                  <div class="numeric-field">
+                    <label for="fabricWidth">Ancho <button type="button" class="info-trigger" aria-label="Ancho fijo del rollo de tela. Valor en centímetros (cm)." data-tooltip="Ancho fijo del rollo de tela. Valor en centímetros (cm).">ⓘ</button></label>
+                    <input
+                      id="fabricWidth"
+                      name="fabricWidth"
+                      class="numeric-input numeric-input--ancho"
+                      type="number"
+                      inputmode="numeric"
+                      pattern="[0-9]*"
+                      min="1"
+                      max="999"
+                      step="1"
+                      data-max-digits="3"
+                      value="180"
+                      oninput="this.value = this.value.replace(/\D/g, '').slice(0, this.dataset.maxDigits || 3);"
+                    />
+                  </div>
+                  <div class="numeric-field">
+                    <label for="marginX">Margen 1 <button type="button" class="info-trigger" aria-label="Margen aplicado a ambos lados de la tela. Valor en centímetros (cm)." data-tooltip="Margen aplicado a ambos lados de la tela. Valor en centímetros (cm).">ⓘ</button></label>
+                    <input
+                      id="marginX"
+                      name="marginX"
+                      class="numeric-input numeric-input--short"
+                      type="number"
+                      inputmode="numeric"
+                      pattern="[0-9]*"
+                      min="0"
+                      max="99"
+                      step="1"
+                      data-max-digits="2"
+                      value="1"
+                      oninput="this.value = this.value.replace(/\D/g, '').slice(0, this.dataset.maxDigits || 2);"
+                    />
+                  </div>
+                  <div class="numeric-field">
+                    <label for="marginY">Margen 2 <button type="button" class="info-trigger" aria-label="Margen aplicado al inicio y fin del largo de la tela. Valor en centímetros (cm)." data-tooltip="Margen aplicado al inicio y fin del largo de la tela. Valor en centímetros (cm).">ⓘ</button></label>
+                    <input
+                      id="marginY"
+                      name="marginY"
+                      class="numeric-input numeric-input--short"
+                      type="number"
+                      inputmode="numeric"
+                      pattern="[0-9]*"
+                      min="0"
+                      max="99"
+                      step="1"
+                      data-max-digits="2"
+                      value="1"
+                      oninput="this.value = this.value.replace(/\D/g, '').slice(0, this.dataset.maxDigits || 2);"
+                    />
+                  </div>
+                </div>
+              </div>
+              <div class="param-section param-section--compact" aria-label="GAPs">
+                <div class="param-section__title-row">
+                  <h3 class="param-title">GAPs</h3>
+                </div>
+                <div class="param-row param-row--double" role="group" aria-label="GAPs">
+                  <div class="numeric-field">
+                    <label for="gapX">Gap H <button type="button" class="info-trigger" aria-label="Separación horizontal entre piezas. Valor en centímetros (cm)." data-tooltip="Separación horizontal entre piezas. Valor en centímetros (cm).">ⓘ</button></label>
+                    <input
+                      id="gapX"
+                      name="gapX"
+                      class="numeric-input numeric-input--short"
+                      type="number"
+                      inputmode="numeric"
+                      pattern="[0-9]*"
+                      min="0"
+                      max="99"
+                      step="1"
+                      data-max-digits="2"
+                      value="1"
+                      oninput="this.value = this.value.replace(/\D/g, '').slice(0, this.dataset.maxDigits || 2);"
+                    />
+                  </div>
+                  <div class="numeric-field">
+                    <label for="gapY">Gap V <button type="button" class="info-trigger" aria-label="Separación vertical entre filas. Valor en centímetros (cm)." data-tooltip="Separación vertical entre filas. Valor en centímetros (cm).">ⓘ</button></label>
+                    <input
+                      id="gapY"
+                      name="gapY"
+                      class="numeric-input numeric-input--short"
+                      type="number"
+                      inputmode="numeric"
+                      pattern="[0-9]*"
+                      min="0"
+                      max="99"
+                      step="1"
+                      data-max-digits="2"
+                      value="1"
+                      oninput="this.value = this.value.replace(/\D/g, '').slice(0, this.dataset.maxDigits || 2);"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+        <div class="modal__footer">
+          <button type="button" class="secondary" data-modal-dismiss="true">Cerrar</button>
+          <button type="button" class="primary" id="saveFabricSettingsBtn">Guardar</button>
+        </div>
+      </div>
+    </div>
 
     <main class="app-shell">
       <section class="panel form-panel" aria-labelledby="formTitle">

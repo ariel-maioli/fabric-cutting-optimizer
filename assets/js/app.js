@@ -42,6 +42,9 @@
   const optimizeBtn = document.getElementById('optimizeBtn');
   const quickOptimizeBtn = document.getElementById('quickOptimizeBtn');
   const themeToggle = document.getElementById('themeToggle');
+  const settingsTrigger = document.getElementById('fabricSettingsTrigger');
+  const settingsModal = document.getElementById('fabricSettingsModal');
+  const saveFabricSettingsBtn = document.getElementById('saveFabricSettingsBtn');
   const tooltipTriggers = Array.from(document.querySelectorAll('[data-tooltip]'));
   const TOOLTIP_ID = 'fabric-tooltip';
 
@@ -76,6 +79,7 @@
   let tooltipEl = null;
   let tooltipActiveTrigger = null;
   let previewTooltipAnchor = null;
+  let lastFocusedBeforeModal = null;
 
   init();
 
@@ -84,6 +88,7 @@
     bindPieceEvents();
     bindOptimizeButton();
     bindThemeToggle();
+    bindSettingsModal();
     bindExport();
     bindPreviewHover();
     renderPieceRows();
@@ -98,6 +103,50 @@
     window.addEventListener('scroll', refreshTooltipPosition, true);
     bindTooltips();
     refreshExportButtonState();
+  }
+
+  function bindSettingsModal() {
+    if (!settingsTrigger || !settingsModal) return;
+    settingsTrigger.addEventListener('click', () => openSettingsModal());
+    const dismissors = settingsModal.querySelectorAll('[data-modal-dismiss]');
+    dismissors.forEach((el) => {
+      el.addEventListener('click', () => closeSettingsModal());
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && settingsModal.dataset.open === 'true') {
+        closeSettingsModal();
+      }
+    });
+    if (saveFabricSettingsBtn) {
+      saveFabricSettingsBtn.addEventListener('click', () => {
+        closeSettingsModal();
+      });
+    }
+  }
+
+  function openSettingsModal() {
+    if (!settingsModal) return;
+    syncScalarInputs();
+    lastFocusedBeforeModal = document.activeElement;
+    settingsModal.removeAttribute('hidden');
+    settingsModal.dataset.open = 'true';
+    settingsTrigger?.setAttribute('aria-expanded', 'true');
+    const firstField = settingsModal.querySelector('input, button, select, textarea');
+    if (firstField) {
+      firstField.focus();
+    }
+  }
+
+  function closeSettingsModal() {
+    if (!settingsModal || settingsModal.dataset.open !== 'true') return;
+    settingsModal.dataset.open = 'false';
+    settingsModal.setAttribute('hidden', 'hidden');
+    settingsTrigger?.setAttribute('aria-expanded', 'false');
+    if (lastFocusedBeforeModal && typeof lastFocusedBeforeModal.focus === 'function') {
+      lastFocusedBeforeModal.focus();
+    } else {
+      settingsTrigger?.focus();
+    }
   }
 
   function bindScalarInputs() {
