@@ -142,6 +142,11 @@ input:focus-visible {
   overflow: hidden;
 }
 
+.preview-panel {
+  padding-top: var(--space-3);
+  padding-bottom: var(--space-3);
+}
+
 .panel-header {
   flex: 0 0 auto;
   margin-bottom: var(--space-4);
@@ -189,12 +194,26 @@ input:focus-visible {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.param-row--inline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
 .numeric-field {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
   min-width: 0;
   align-items: center;
+}
+
+.param-row--inline .numeric-field {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-2);
 }
 
 .numeric-field label {
@@ -249,6 +268,13 @@ input[type="number"]::-webkit-inner-spin-button {
   align-items: center;
 }
 
+.piece-section__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+}
+
 .piece-section__heading {
   display: inline-flex;
   align-items: center;
@@ -256,12 +282,21 @@ input[type="number"]::-webkit-inner-spin-button {
   margin: 0;
 }
 
+.piece-section__count {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--color-text-subtle);
+  margin-left: auto;
+  text-align: right;
+  flex: 1;
+}
+
 .piece-section__header--sticky {
   position: sticky;
   top: calc(-1 * var(--space-3));
   z-index: 3;
-  padding: var(--space-2) var(--space-2) var(--space-3);
-  margin: calc(-1 * var(--space-2)) calc(-1 * var(--space-2)) var(--space-2);
+  padding: var(--space-2) var(--space-2) 0;
+  margin: calc(-1 * var(--space-2)) calc(-1 * var(--space-2)) 0;
   background: linear-gradient(180deg, var(--color-surface-muted) 80%, transparent);
 }
 
@@ -481,14 +516,29 @@ button.ghost:hover {
 }
 
 .form-footer {
-  margin-top: auto;
-  padding-top: var(--space-2);
+  margin-top: var(--space-2);
+  padding: var(--space-2) var(--space-2);
+  position: sticky;
+  bottom: 0;
+  background: linear-gradient(180deg, rgba(18, 20, 26, 0), var(--color-surface));
+  box-shadow: 0 -8px 20px rgba(12, 16, 22, 0.08);
+  border-bottom-left-radius: var(--radius-lg);
+  border-bottom-right-radius: var(--radius-lg);
+  z-index: 2;
 }
 
 .status {
   font-size: 0.85rem;
   color: var(--color-text-muted);
   min-height: 1.1rem;
+  padding-top: var(--space-1);
+}
+
+.status[data-status="error"],
+.status[data-error="true"],
+.status--error {
+  color: var(--color-danger);
+  font-weight: 600;
 }
 
 .metrics {
@@ -512,37 +562,69 @@ button.ghost:hover {
   font-weight: 600;
 }
 
+.preview-panel .panel-header {
+  display: flex;
+  align-items: stretch;
+  margin-bottom: var(--space-3);
+  padding-block: var(--space-1);
+}
+
+.preview-header__top {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.preview-header__top > .primary {
+  align-self: center;
+}
+
+.preview-title-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.preview-header__top h2 {
+  margin: 0;
+}
+
+.preview-status {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+  width: 100%;
+}
+
+.preview-status[data-status="error"],
+.preview-status[data-error="true"],
+.preview-status--error {
+  color: var(--color-danger);
+  font-weight: 600;
+}
+
 .preview-stage-wrapper {
   flex: 1 1 auto;
   min-height: 0;
   background: var(--color-surface-muted);
   border: 1px solid var(--color-panel-border);
-  border-radius: var(--radius-md);
-  padding: var(--space-3);
+  border-radius: calc(var(--radius-md) - var(--space-2));
+  padding: var(--space-2);
   display: flex;
 }
 
 #previewCanvas {
   width: 100%;
   height: 100%;
-  border-radius: var(--radius-sm);
+  border-radius: calc(var(--radius-sm) - 0.15rem);
   background: var(--color-surface);
 }
 
-.preview-actions {
-  flex: 0 0 auto;
-  margin-top: var(--space-3);
-  display: flex;
-  justify-content: flex-end;
-}
-
+.preview-actions,
 .legend {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: var(--space-1);
-  font-size: 0.78rem;
-  color: var(--color-text-muted);
+  display: none;
 }
 
 @media (max-width: 1280px) {

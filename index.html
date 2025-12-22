@@ -104,7 +104,7 @@
             <div class="param-section__title-row">
               <h3 class="param-title">GAPs</h3>
             </div>
-            <div class="param-row param-row--double" role="group" aria-label="GAPs">
+            <div class="param-row param-row--double param-row--inline" role="group" aria-label="GAPs">
               <div class="numeric-field">
                 <label for="gapX">Gap H <button type="button" class="info-trigger" aria-label="Separación horizontal entre piezas. Valor en centímetros (cm)." data-tooltip="Separación horizontal entre piezas. Valor en centímetros (cm).">ⓘ</button></label>
                 <input
@@ -142,22 +142,24 @@
             </div>
           </div>
 
-          <div class="param-section" aria-label="Tipos de corte">
-            <div class="piece-section__header piece-section__header--sticky">
-              <div class="piece-section__title">
-                <h3 class="param-title piece-section__heading">
-                  Cortes
-                  <button
-                    type="button"
-                    class="info-trigger"
-                    aria-label="Hasta 10 tipos de corte, sin rotaciones."
-                    data-tooltip="Hasta 10 tipos de corte, sin rotaciones."
-                  >ⓘ</button>
-                </h3>
+            <div class="param-section" aria-label="Tipos de corte">
+              <div class="piece-section__header piece-section__header--sticky">
+                <div class="piece-section__meta">
+                  <div class="piece-section__title">
+                    <h3 class="param-title piece-section__heading">
+                      Cortes
+                      <button
+                        type="button"
+                        class="info-trigger"
+                        aria-label="Hasta 10 tipos de corte, sin rotaciones."
+                        data-tooltip="Hasta 10 tipos de corte, sin rotaciones."
+                      >ⓘ</button>
+                    </h3>
+                  </div>
+                  <p class="helper-text piece-section__count" id="pieceLimitHelper">0 / 10 tipos configurados</p>
+                </div>
               </div>
-            </div>
             <div id="pieceList" class="piece-list" role="list" aria-live="polite"></div>
-            <p class="helper-text" id="pieceLimitHelper">0 / 10 tipos configurados</p>
             <div class="piece-floating-actions" aria-label="Acciones rápidas">
               <button type="button" class="secondary" id="addPieceBtn">Agregar corte</button>
               <button type="button" class="primary optimize-btn" id="quickOptimizeBtn">Optimizar</button>
@@ -230,23 +232,22 @@
 
       <section class="panel preview-panel" aria-labelledby="previewTitle">
         <div class="panel-header">
-          <h2 id="previewTitle">Previsualización</h2>
-          <div class="legend">
-            <span>Escala horizontal exacta</span>
-            <span>Largo comprimido para caber en pantalla</span>
+          <div class="preview-header__top">
+            <div class="preview-title-block">
+              <h2 id="previewTitle">Previsualización</h2>
+              <p class="preview-status" aria-live="polite" aria-atomic="true"></p>
+            </div>
+            <button
+              type="button"
+              class="primary"
+              id="exportBtn"
+              aria-label="Exporta la previsualización actual como imagen PNG."
+              data-tooltip="Exporta la previsualización actual como imagen PNG."
+            >Exportar PNG</button>
           </div>
         </div>
         <div class="preview-stage-wrapper" aria-live="polite">
           <canvas id="previewCanvas" width="960" height="520" role="img" aria-label="Distribución de cortes sobre la tela"></canvas>
-        </div>
-        <div class="preview-actions">
-          <button
-            type="button"
-            class="primary"
-            id="exportBtn"
-            aria-label="Exporta la previsualización actual como imagen PNG."
-            data-tooltip="Exporta la previsualización actual como imagen PNG."
-          >Exportar PNG</button>
         </div>
       </section>
     </main>

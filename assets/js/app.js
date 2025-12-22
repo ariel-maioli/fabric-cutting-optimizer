@@ -40,6 +40,7 @@
 
   const statusEl = document.getElementById('formStatus');
   const previewCanvas = document.getElementById('previewCanvas');
+  const previewStatusEl = document.querySelector('.preview-status');
   const exportBtn = document.getElementById('exportBtn');
   const optimizeBtn = document.getElementById('optimizeBtn');
   const quickOptimizeBtn = document.getElementById('quickOptimizeBtn');
@@ -90,7 +91,8 @@
     bindPreviewHover();
     renderPieceRows();
     syncScalarInputs();
-    setStatus(STATUS_MESSAGES.pending);
+    setStatus(STATUS_MESSAGES.pending, { level: 'info' });
+    setPreviewStatus('Aún sin resultados. Haz clic en "Optimizar".', { level: 'info' });
     window.addEventListener('resize', () => {
       renderPreview(lastLayout, true);
       refreshTooltipPosition();
@@ -155,7 +157,7 @@
     if (!exportBtn) return;
     exportBtn.addEventListener('click', () => {
       if (!lastLayout || !Array.isArray(lastLayout.placements) || !lastLayout.placements.length) {
-        setStatus('Genera una distribución antes de exportar.');
+        setStatus('Genera una distribución antes de exportar.', { level: 'info' });
         return;
       }
       renderPreview(lastLayout, true);
@@ -224,7 +226,8 @@
   }
 
   function markDirty(message) {
-    setStatus(message || STATUS_MESSAGES.pending);
+    setStatus(message || STATUS_MESSAGES.pending, { level: 'info' });
+    setPreviewStatus('Aún sin resultados. Haz clic en "Optimizar".', { level: 'info' });
   }
 
   function handleAddPiece() {
@@ -395,11 +398,14 @@
     lastLayout = snapshot.layout;
     updateMetrics(snapshot.metrics);
     if (snapshot.layout) {
-      setStatus(snapshot.status || STATUS_MESSAGES.success);
+      setStatus(snapshot.status || STATUS_MESSAGES.success, { level: 'success' });
+      setPreviewStatus('Última optimización exitosa.', { level: 'success' });
     } else if (snapshot.status) {
-      setStatus(snapshot.status);
+      setStatus(snapshot.status, { level: 'error' });
+      setPreviewStatus(snapshot.status, { level: 'error' });
     } else {
       setStatus('');
+      setPreviewStatus('', { level: 'info' });
     }
     renderPreview(snapshot.layout);
   }
@@ -725,9 +731,39 @@
     return `${waste.toFixed(1)}%`;
   }
 
-  function setStatus(message) {
+  function setStatus(message, options = {}) {
     if (!statusEl) return;
-    statusEl.textContent = message || '';
+    const text = message || '';
+    statusEl.textContent = text;
+    const level = options.level || '';
+    if (level) {
+      statusEl.dataset.status = level;
+      if (level === 'error') {
+        statusEl.dataset.error = 'true';
+      } else {
+        delete statusEl.dataset.error;
+      }
+    } else {
+      delete statusEl.dataset.status;
+      delete statusEl.dataset.error;
+    }
+  }
+
+  function setPreviewStatus(message, options = {}) {
+    if (!previewStatusEl) return;
+    previewStatusEl.textContent = message || '';
+    const level = options.level || '';
+    if (level) {
+      previewStatusEl.dataset.status = level;
+      if (level === 'error') {
+        previewStatusEl.dataset.error = 'true';
+      } else {
+        delete previewStatusEl.dataset.error;
+      }
+    } else {
+      delete previewStatusEl.dataset.status;
+      delete previewStatusEl.dataset.error;
+    }
   }
 
   function renderPreview(layout, forceRedraw) {
