@@ -233,14 +233,58 @@
     const tempCtx = tempCanvas.getContext('2d');
     tempCanvas.width = canvas.width;
     tempCanvas.height = canvas.height;
-    tempCtx.drawImage(canvas, 0, 0);
+    // Copiar el layout SIN la leyenda de ancho/largo (badge)
+    // Redibujar el layout sin llamar a drawCombinedBadge
+    // ---
+    // 1. Limpiar el canvas temporal
+    tempCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
+    // 2. Redibujar el layout (sin badge)
+    const metrics = { dpr };
+    const placements = Array.isArray(layout?.placements) ? layout.placements : [];
+    const colors = readThemeColors();
+    const geometry = getPreviewGeometry(layout, dpr);
+    if (!geometry) return;
+    const cutColors = buildCutColorMap(state.pieces, colors);
+    const { offsetX, offsetY, scaleX, scaleY, totalLength } = geometry;
+    const fabricWidthPx = layout.spec.widthCm * scaleX;
+    const fabricHeightPx = totalLength * scaleY;
+    // Fondo tela
+    tempCtx.fillStyle = colors.fabricFill;
+    tempCtx.fillRect(offsetX, offsetY, fabricWidthPx, fabricHeightPx);
+    tempCtx.strokeStyle = colors.fabricStroke;
+    tempCtx.lineWidth = 2 * dpr;
+    tempCtx.strokeRect(offsetX, offsetY, fabricWidthPx, fabricHeightPx);
+    // Área imprimible
+    const printableX = offsetX + layout.spec.marginX * scaleX;
+    const printableY = offsetY + layout.spec.marginY * scaleY;
+    const printableWidth = (layout.spec.widthCm - layout.spec.marginX * 2) * scaleX;
+    const printableHeight = (totalLength - layout.spec.marginY * 2) * scaleY;
+    tempCtx.setLineDash([6 * dpr, 4 * dpr]);
+    tempCtx.strokeStyle = colors.printableStroke;
+    tempCtx.strokeRect(printableX, printableY, printableWidth, printableHeight);
+    tempCtx.setLineDash([]);
+    // Piezas
+    placements.forEach((placement) => {
+      const fill = cutColors.get(placement.cutId) || colors.piecePrimary;
+      const x = offsetX + placement.x * scaleX;
+      const y = offsetY + placement.y * scaleY;
+      const width = placement.width * scaleX;
+      const height = placement.height * scaleY;
+      tempCtx.fillStyle = fill;
+      tempCtx.globalAlpha = 0.85;
+      tempCtx.fillRect(x, y, width, height);
+      tempCtx.globalAlpha = 1;
+      tempCtx.strokeStyle = colors.fabricStroke;
+      tempCtx.lineWidth = 1.2 * dpr;
+      tempCtx.strokeRect(x, y, width, height);
+    });
 
     // 3. Preparar datos de cortes únicos (por ID)
     const pieces = (state.pieces || []).map((p, idx) => ({
       ...p,
       _order: idx
     }));
-    const cutColors = buildCutColorMap(state.pieces, readThemeColors());
+    // cutColors ya está declarado más arriba si es necesario, no redeclarar
 
     // 4. Definir dimensiones de la tabla
     const rowHeight = 36 * dpr;
@@ -252,19 +296,20 @@
     const tableRows = pieces.length + 1; // +1 para encabezado
     const tableHeight = tableRows * rowHeight + padding;
 
-    // 5. Crear un canvas final más alto
+    // 5. Crear un canvas final más alto (dejar espacio extra para la leyenda)
+    const extraFooter = Math.round(rowHeight * 1.8 + padding * 2); // espacio para la leyenda
     const finalCanvas = document.createElement('canvas');
     finalCanvas.width = tempCanvas.width;
-    finalCanvas.height = tempCanvas.height + tableHeight;
+    finalCanvas.height = tempCanvas.height + tableHeight + extraFooter;
     const finalCtx = finalCanvas.getContext('2d');
 
     // 6. Pegar la imagen del layout
     finalCtx.drawImage(tempCanvas, 0, 0);
 
-    // 7. Dibujar fondo blanco para la tabla
+    // 7. Dibujar fondo blanco para la tabla y pie
     finalCtx.save();
     finalCtx.fillStyle = '#fff';
-    finalCtx.fillRect(0, tempCanvas.height, finalCanvas.width, tableHeight);
+    finalCtx.fillRect(0, tempCanvas.height, finalCanvas.width, tableHeight + extraFooter);
     finalCtx.restore();
 
     // 8. Dibujar tabla
@@ -337,7 +382,9 @@
     const anchoText = `Ancho de tela: ${ancho} cm`;
     const largoText = `Largo de tela: ${largo} cm`;
     const pieText = `${anchoText}   |   ${largoText}`;
-    // finalCtx.fillText(pieText, finalCanvas.width / 2, y + rowHeight * 0.8);
+    // Ahora la leyenda va en el footer extra, bien visible
+    const pieY = tempCanvas.height + tableHeight + extraFooter / 2 + pieFontSize / 2;
+    finalCtx.fillText(pieText, finalCanvas.width / 2, pieY);
 
     // 9. Exportar
     const dataUrl = finalCanvas.toDataURL('image/png');
@@ -550,10 +597,8 @@
   }
 
   function refreshExportButtonState() {
-    if (!exportBtn) return;
-    const enabled = hasConfiguredCuts();
-    exportBtn.disabled = !enabled;
-    exportBtn.setAttribute('aria-disabled', enabled ? 'false' : 'true');
+    const hasContent = lastLayout && Array.isArray(lastLayout.placements) && lastLayout.placements.length > 0;
+    exportBtn.disabled = !hasContent;
   }
 
   function refreshOptimizeButtonState() {
@@ -591,6 +636,7 @@
       setPreviewStatus('Última optimización exitosa.', { level: 'success' });
       needsReoptimize = false;
       refreshOptimizeButtonState();
+      refreshExportButtonState(); // <-- Asegura actualización del botón exportar
     } else if (snapshot.status) {
       setStatus(snapshot.status, { level: 'error' });
       setPreviewStatus(snapshot.status, { level: 'error' });
@@ -599,6 +645,7 @@
       setPreviewStatus('', { level: 'info' });
     }
     renderPreview(snapshot.layout);
+    refreshExportButtonState(); // <-- También tras render
   }
 
   function computeSnapshot() {
