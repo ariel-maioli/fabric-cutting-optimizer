@@ -18,10 +18,7 @@
     gapY: { path: ['spacing', 'gapY'], min: 0 }
   };
 
-  const helpers = Array.from(document.querySelectorAll('.helper-text[data-field]')).reduce((acc, el) => {
-    acc[el.dataset.field] = el;
-    return acc;
-  }, {});
+  // ...existing code...
 
   const pieceTemplate = document.getElementById('pieceRowTemplate');
   const pieceList = document.getElementById('pieceList');
@@ -306,22 +303,35 @@
     }));
     // cutColors ya está declarado más arriba si es necesario, no redeclarar
 
-    // 4. Definir dimensiones de la tabla
+    // 4. Definir dimensiones de la tabla (ID autoajustable)
     const rowHeight = 36 * dpr;
     const colorBox = 28 * dpr;
     const fontSize = 16 * dpr;
     const padding = 12 * dpr;
-    const colWidths = [colorBox + 3 * padding, 90 * dpr, 180 * dpr, 120 * dpr];
-    const tableWidth = colWidths.reduce((a, b) => a + b, 0);
-    const tableRows = pieces.length + 1; // +1 para encabezado
-    const tableHeight = tableRows * rowHeight + padding;
-
-    // 5. Crear un canvas final más alto (dejar espacio extra para la leyenda)
+    // --- Creamos el canvas final antes de medir texto ---
     const extraFooter = Math.round(rowHeight * 1.8 + padding * 2); // espacio para la leyenda
     const finalCanvas = document.createElement('canvas');
     finalCanvas.width = tempCanvas.width;
-    finalCanvas.height = tempCanvas.height + tableHeight + extraFooter;
+    // Altura provisional, se ajusta después
+    finalCanvas.height = tempCanvas.height + 1000;
     const finalCtx = finalCanvas.getContext('2d');
+    // Medir el ID más ancho
+    finalCtx.font = `bold ${fontSize}px 'Segoe UI', 'Arial', sans-serif`;
+    let maxIdWidth = 0;
+    (state.pieces || []).forEach((p, idx) => {
+      const id = (p.label || '').trim() || getIdPlaceholder(idx);
+      const width = finalCtx.measureText(id).width;
+      if (width > maxIdWidth) maxIdWidth = width;
+    });
+    // Asegurar un mínimo razonable
+    const minIdCol = 90 * dpr;
+    const idColWidth = Math.max(minIdCol, maxIdWidth + 2 * padding);
+    const colWidths = [colorBox + 3 * padding, idColWidth, 180 * dpr, 120 * dpr];
+    const tableWidth = colWidths.reduce((a, b) => a + b, 0);
+    const tableRows = pieces.length + 1; // +1 para encabezado
+    const tableHeight = tableRows * rowHeight + padding;
+    // Ajustar altura final del canvas
+    finalCanvas.height = tempCanvas.height + tableHeight + extraFooter;
 
     // 6. Pegar la imagen del layout
     finalCtx.drawImage(tempCanvas, 0, 0);
@@ -1115,8 +1125,8 @@
       const width = placement.width * scaleX;
       const height = placement.height * scaleY;
       const isDimmed = highlightedCutId && placement.cutId !== highlightedCutId;
-      ctx.fillStyle = fill;
-      ctx.globalAlpha = isDimmed ? 0.2 : 0.85;
+      ctx.fillStyle = isDimmed ? colors.surfaceMuted : fill;
+      ctx.globalAlpha = isDimmed ? 1 : 0.85;
       ctx.fillRect(x, y, width, height);
       ctx.globalAlpha = 1;
       ctx.strokeStyle = colors.fabricStroke;
@@ -1200,6 +1210,7 @@
     const styles = getComputedStyle(document.documentElement);
     return {
       fabricFill: styles.getPropertyValue('--color-accent-soft').trim() || 'rgba(0,0,0,0.05)',
+      surfaceMuted: styles.getPropertyValue('--color-surface-muted').trim() || '#eef1f6',
       fabricStroke: styles.getPropertyValue('--color-fabric-stroke').trim() || '#1f2933',
       printableStroke: styles.getPropertyValue('--color-text-muted').trim() || '#6b7280',
       piecePrimary: styles.getPropertyValue('--color-piece').trim() || '#008080',
