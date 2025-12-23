@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Optimización de Corte de Tela</title>
     <link rel="stylesheet" href="assets/css/styles.css" />
+    <link rel="stylesheet" href="assets/css/modal.css" />
     <script>
       (function () {
         try {
@@ -39,7 +40,7 @@
           aria-expanded="false"
         >
           <span class="settings-trigger__icon" aria-hidden="true">⚙</span>
-          <span class="settings-trigger__label">Tela / GAPs</span>
+          <span class="settings-trigger__label">Configuración</span>
         </button>
         <button type="button" class="theme-switch" aria-label="Cambiar tema" role="switch" aria-checked="false" id="themeToggle">
           <span class="theme-switch__icon" aria-hidden="true">◑</span>
@@ -125,7 +126,7 @@
                 </div>
                 <div class="param-row param-row--double" role="group" aria-label="GAPs">
                   <div class="numeric-field">
-                    <label for="gapX">Gap H <button type="button" class="info-trigger" aria-label="Separación horizontal entre piezas. Valor en centímetros (cm)." data-tooltip="Separación horizontal entre piezas. Valor en centímetros (cm)." data-tooltip-id="fabricTooltip">ⓘ</button></label>
+                    <label for="gapX">Gap H <button type="button" class="info-trigger" aria-label="Separación horizontal entre cortes. Valor en centímetros (cm)." data-tooltip="Separación horizontal entre cortes. Valor en centímetros (cm)." data-tooltip-id="fabricTooltip">ⓘ</button></label>
                     <input
                       id="gapX"
                       name="gapX"
@@ -185,8 +186,8 @@
                       <button
                         type="button"
                         class="info-trigger"
-                        aria-label="El campo ID es para identificar cada corte y es editable. Todas las medidas son en cm."
-                        data-tooltip="El campo ID es para identificar cada corte y es editable. Todas las medidas son en cm."
+                        aria-label="Todas las medidas son en cm. El campo ID es para identificar cada corte y es editable."
+                        data-tooltip="Todas las medidas son en cm. El campo ID es para identificar cada corte y es editable."
                       >ⓘ</button>
                     </h3>
                   </div>
@@ -213,7 +214,7 @@
         <dl class="metrics" id="metricsList">
           <div>
             <dt>
-              Ancho de tela
+              Ancho
               <button
                 type="button"
                 class="info-trigger"
@@ -225,13 +226,13 @@
           </div>
           <div>
             <dt>
-              Largo total
+              Largo
               <span
                 class="info-tip"
                 role="button"
                 tabindex="0"
-                aria-label="Largo total de tela necesario para ubicar todas las piezas según el layout actual."
-                data-tooltip="Largo total de tela necesario para ubicar todas las piezas según el layout actual."
+                aria-label="Largo total de tela necesario para ubicar todos los cortes según el layout actual."
+                data-tooltip="Largo total de tela necesario para ubicar todos los cortes según el layout actual."
               >ⓘ</span>
             </dt>
             <dd id="metricLength">--</dd>
@@ -262,13 +263,13 @@
           </div>
           <div>
             <dt>
-              Piezas
+              Cortes
               <span
                 class="info-tip"
                 role="button"
                 tabindex="0"
-                aria-label="Cantidad total de piezas colocadas en el layout, sumando todos los tipos de corte."
-                data-tooltip="Cantidad total de piezas colocadas en el layout, sumando todos los tipos de corte."
+                aria-label="Cantidad total de cortes colocados en el layout, sumando todos los tipos de cortes."
+                data-tooltip="Cantidad total de cortes colocados en el layout, sumando todos los tipos de cortes."
               >ⓘ</span>
             </dt>
             <dd id="metricPieces">--</dd>
@@ -354,6 +355,7 @@
       </article>
     </template>
 
+    <script src="assets/js/modal.js" defer></script>
     <script src="assets/js/app.js" defer></script>
   </body>
 </html>

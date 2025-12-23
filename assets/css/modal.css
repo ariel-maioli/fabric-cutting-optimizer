@@ -1,0 +1,60 @@
+.alert-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.18);
+}
+.alert-modal[style*="display: flex"] {
+  display: flex !important;
+}
+.alert-modal__overlay {
+  position: absolute;
+  inset: 0;
+  background: transparent;
+}
+.alert-modal__dialog {
+  position: relative;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+  min-width: 320px;
+  max-width: 90vw;
+  padding: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+.alert-modal__content {
+  padding: 2rem 1.5rem 1.5rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+.alert-modal__title {
+  font-size: 1.35rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+.alert-modal__body {
+  font-size: 1rem;
+  margin-bottom: 1.5rem;
+}
+.alert-modal__close {
+  align-self: flex-end;
+  padding: 0.5rem 1.2rem;
+  font-size: 1rem;
+  border: none;
+  border-radius: 6px;
+  background: #2563eb;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.alert-modal__close:hover {
+  background: #1d4ed8;
+}

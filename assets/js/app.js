@@ -173,14 +173,34 @@
     if (optimizeBtn) {
       optimizeBtn.addEventListener('click', () => {
         if (optimizeBtn.disabled) return;
+        if (!validateUniqueCutIds()) return;
         runOptimization();
       });
     }
     if (quickOptimizeBtn) {
       quickOptimizeBtn.addEventListener('click', () => {
         if (quickOptimizeBtn.disabled) return;
+        if (!validateUniqueCutIds()) return;
         runOptimization();
       });
+    }
+    // Valida que los IDs de cortes sean únicos. Si hay repetidos, muestra modal y retorna false.
+    function validateUniqueCutIds() {
+      const ids = state.pieces.map(p => (p.label || '').trim().toUpperCase());
+      const seen = new Set();
+      const duplicates = ids.filter((id, idx) => {
+        if (seen.has(id)) return true;
+        seen.add(id);
+        return false;
+      });
+      if (duplicates.length > 0) {
+        const uniqueDups = [...new Set(duplicates)];
+        AlertModal.show(
+          `<p>Hay <b>IDs de cortes repetidos</b>:</p><ul style='margin-top:8px'>${uniqueDups.map(id => `<li>${id}</li>`).join('')}</ul>`
+        );
+        return false;
+      }
+      return true;
     }
   }
 
@@ -263,7 +283,7 @@
     tempCtx.strokeStyle = colors.printableStroke;
     tempCtx.strokeRect(printableX, printableY, printableWidth, printableHeight);
     tempCtx.setLineDash([]);
-    // Piezas
+    // Cortes
     placements.forEach((placement) => {
       const fill = cutColors.get(placement.cutId) || colors.piecePrimary;
       const x = offsetX + placement.x * scaleX;
@@ -462,12 +482,28 @@
 
   function handleAddPiece() {
     if (state.pieces.length >= MAX_PIECE_TYPES) return;
-    const nextIndex = state.pieces.length;
+    // Buscar el siguiente índice libre para el ID (letra)
+    let usedIndexes = state.pieces.map(p => {
+      const match = (p.label || '').match(/^Corte ([A-Z]+)$/);
+      if (match) {
+        // Convertir letras a índice (A=0, B=1, ...)
+        let idx = 0;
+        for (let i = 0; i < match[1].length; i++) {
+          idx = idx * 26 + (match[1].charCodeAt(i) - 65);
+        }
+        return idx;
+      }
+      return null;
+    }).filter(idx => idx !== null);
+    let nextIndex = 0;
+    while (usedIndexes.includes(nextIndex)) {
+      nextIndex++;
+    }
     state.pieces.push(
       createPiece({
         label: `Corte ${getIdPlaceholder(nextIndex)}`,
-        width: 20,
-        height: 20,
+        width: 10,
+        height: 10,
         quantity: 1
       })
     );
@@ -658,7 +694,7 @@
     }
     const expandedPieces = expandPieces(state.pieces);
     if (!expandedPieces.length) {
-      return { status: 'Agrega al menos una pieza con cantidad mayor a cero.', metrics: null, layout: null };
+      return { status: 'Agrega al menos un corte con cantidad mayor a cero.', metrics: null, layout: null };
     }
     const printableWidth = spec.widthCm - spec.marginX * 2;
     if (printableWidth <= 0) {
@@ -714,7 +750,7 @@
   function runShelf(spec, pieces) {
     const printableWidth = spec.widthCm - spec.marginX * 2;
     if (printableWidth <= 0) {
-      return { error: 'Sin ancho útil para ubicar piezas.' };
+      return { error: 'Sin ancho útil para ubicar cortes.' };
     }
     const gapX = Math.max(0, spec.gapX || 0);
     const gapY = Math.max(0, spec.gapY || 0);
@@ -731,7 +767,7 @@
       }
       const node = selectBestPlacement(freeRects, piece, gapX, gapY, currentMaxY);
       if (!node) {
-        return { error: `No se pudo ubicar la pieza "${piece.label}".` };
+        return { error: `No se pudo ubicar el corte "${piece.label}".` };
       }
       placements.push({
         pieceId: piece.id,
@@ -966,9 +1002,12 @@
     }
     if (value >= 100) {
       const meters = value / 100;
-      return `${meters.toFixed(2)} m (${value.toFixed(1)} cm)`;
+      // Mostrar un decimal si es necesario, sin truncar a .0
+      const metersText = Number.isInteger(meters) ? `${meters}` : meters.toFixed(1);
+      return `${metersText} m (${Math.ceil(value)} cm)`;
     }
-    return `${value.toFixed(1)} cm`;
+    // Redondear hacia arriba los cm
+    return `${Math.ceil(value)} cm`;
   }
 
   function formatMeters(value) {
@@ -986,6 +1025,13 @@
   function setStatus(message, options = {}) {
     if (!statusEl) return;
     const text = message || '';
+    if (options.level === 'error') {
+      AlertModal.show(`<p>${text}</p>`);
+      statusEl.textContent = '';
+      delete statusEl.dataset.status;
+      delete statusEl.dataset.error;
+      return;
+    }
     statusEl.textContent = text;
     const level = options.level || '';
     if (level) {
@@ -1003,6 +1049,12 @@
 
   function setPreviewStatus(message, options = {}) {
     if (!previewStatusEl) return;
+    if (options.level === 'error') {
+      previewStatusEl.textContent = '';
+      delete previewStatusEl.dataset.status;
+      delete previewStatusEl.dataset.error;
+      return;
+    }
     previewStatusEl.textContent = message || '';
     const level = options.level || '';
     if (level) {

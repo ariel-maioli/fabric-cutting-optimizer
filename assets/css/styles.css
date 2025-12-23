@@ -613,6 +613,7 @@ input[type="text"] {
   width: 100%;
 }
 
+
 .piece-row__grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -625,7 +626,7 @@ input[type="text"] {
   margin: var(--space-3) calc(-1 * var(--space-3)) calc(-1 * var(--space-3));
   padding: var(--space-2) var(--space-3);
   background: var(--color-surface);
-  border-top: 1px solid var(--color-panel-border);
+  /* border-top removed to eliminate gray bar */
   display: flex;
   gap: var(--space-2);
   justify-content: space-between;
@@ -756,6 +757,8 @@ button.ghost:hover {
 .metrics dd {
   margin: 0;
   font-weight: 600;
+  text-align: right;
+  flex: 1 1 auto;
 }
 
 .preview-panel .panel-header {
