@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Fabric Cutting Optimizer — Ayuda</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      background: #f7f8fa;
+      color: #23262b;
+      font-family: system-ui, sans-serif;
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .help-container {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 24px rgba(30,34,40,0.07);
+      max-width: 420px;
+      width: 100%;
+      padding: 2.5rem 2rem 2rem 2rem;
+      margin: 2rem;
+      text-align: left;
+    }
+    h1 {
+      font-size: 1.35rem;
+      margin-bottom: 1.2rem;
+      text-align: center;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+    }
+    section {
+      margin-bottom: 1.3rem;
+    }
+    ul, ol {
+      margin: 0 0 0.7rem 1.1em;
+      padding: 0;
+      line-height: 1.7;
+    }
+    li {
+      margin-bottom: 0.2em;
+      font-size: 1rem;
+    }
+    .footer {
+      text-align: center;
+      margin-top: 1.5rem;
+    }
+    .back-link {
+      display: inline-block;
+      padding: 0.5em 1.2em;
+      background: #f0f1f4;
+      color: #23262b;
+      border-radius: 6px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 1rem;
+      transition: background 0.15s;
+    }
+    .back-link:hover {
+      background: #e2e4ea;
+    }
+  </style>
+</head>
+<body>
+  <div class="help-container">
+    <h1>Fabric Cutting Optimizer — Ayuda</h1>
+    <section>
+      <strong>¿Qué hace esta app?</strong>
+      <ul>
+        <li>Optimiza la ubicación de cortes sobre una tela de ancho fijo</li>
+        <li>Minimiza el largo total necesario</li>
+        <li>Reduce desperdicio interno</li>
+        <li>No rota piezas</li>
+      </ul>
+    </section>
+    <section>
+      <strong>Flujo básico de uso</strong>
+      <ol>
+        <li>Configurar ancho y márgenes de la tela</li>
+        <li>Definir GAPs entre piezas</li>
+        <li>Agregar cortes (ancho × alto × cantidad)</li>
+        <li>Ejecutar optimización</li>
+        <li>Analizar preview y métricas</li>
+      </ol>
+    </section>
+    <section>
+      <strong>Parámetros</strong>
+      <ul>
+        <li><b>Ancho:</b> ancho fijo de la tela</li>
+        <li><b>Margen 1 / Margen 2:</b> márgenes de seguridad</li>
+        <li><b>Gap H / Gap V:</b> separación mínima entre piezas</li>
+      </ul>
+    </section>
+    <section>
+      <strong>Métricas</strong>
+      <ul>
+        <li><b>Ancho:</b> ancho fijo de la tela</li>
+        <li><b>Largo:</b> largo total requerido de tela</li>
+        <li><b>Uso de tela:</b> porcentaje de área aprovechada</li>
+        <li><b>Desperdicio:</b> porcentaje de tela desperdiciada</li>
+        <li><b>Cortes:</b> cantidad total de cortes colocados</li>
+      </ul>
+    </section>
+    <div class="footer">
+      <a class="back-link" href="index.html">&#8592; Volver a la aplicación</a>
+    </div>
+  </div>
+</body>
+</html>
