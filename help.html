@@ -1,29 +1,65 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+    <script>
+      (function () {
+        try {
+          var stored = window.localStorage.getItem('fabric-theme');
+          if (stored) {
+            document.documentElement.setAttribute('data-theme', stored);
+            return;
+          }
+          if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.setAttribute('data-theme', 'dark');
+          }
+        } catch (err) {
+          /* no-op */
+        }
+      })();
+    </script>
   <meta charset="UTF-8">
   <title>Fabric Cutting Optimizer — Ayuda</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
+    :root[data-theme="light"],
+    :root:not([data-theme]) {
+      --color-bg: #f7f8fa;
+      --color-surface: #fff;
+      --color-text: #23262b;
+      --color-link-bg: #f0f1f4;
+      --color-link-text: #23262b;
+      --color-link-bg-hover: #e2e4ea;
+    }
+    :root[data-theme="dark"] {
+      --color-bg: #0c1016;
+      --color-surface: #161c27;
+      --color-text: #f6f7f9;
+      --color-link-bg: #232b3a;
+      --color-link-text: #f6f7f9;
+      --color-link-bg-hover: #232b3a;
+    }
     body {
-      background: #f7f8fa;
-      color: #23262b;
+      background: var(--color-bg);
+      color: var(--color-text);
       font-family: system-ui, sans-serif;
       margin: 0;
       min-height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
+      transition: background 0.2s, color 0.2s;
     }
     .help-container {
-      background: #fff;
+      background: var(--color-surface);
+      color: var(--color-text);
       border-radius: 12px;
-      box-shadow: 0 4px 24px rgba(30,34,40,0.07);
+      box-shadow: 0 4px 24px rgba(30,34,40,0.13);
       max-width: 420px;
       width: 100%;
       padding: 2.5rem 2rem 2rem 2rem;
       margin: 2rem;
       text-align: left;
+      transition: background 0.2s, color 0.2s;
     }
     h1 {
       font-size: 1.35rem;
@@ -51,16 +87,17 @@
     .back-link {
       display: inline-block;
       padding: 0.5em 1.2em;
-      background: #f0f1f4;
-      color: #23262b;
+      background: var(--color-link-bg);
+      color: var(--color-link-text);
       border-radius: 6px;
       text-decoration: none;
       font-weight: 600;
       font-size: 1rem;
-      transition: background 0.15s;
+      transition: background 0.15s, color 0.15s;
     }
     .back-link:hover {
-      background: #e2e4ea;
+      background: var(--color-link-bg-hover);
+      color: var(--color-link-text);
     }
   </style>
 </head>
